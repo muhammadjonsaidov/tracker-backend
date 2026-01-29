@@ -39,9 +39,16 @@ public class SseQueryTokenAuthFilter extends OncePerRequestFilter {
             if (token != null && !token.isBlank()) {
                 try {
                     Jwt jwt = jwtDecoder.decode(token);
+                    String typ = jwt.getClaimAsString("typ");
+                    if (!"stream".equals(typ)) {
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
                     var auth = jwtAuthenticationConverter.convert(jwt);
-                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(auth);
+                    if (auth != null) {
+                        auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(auth);
+                    }
                 } catch (Exception ignore) {
                     // noto‘g‘ri token -> security config baribir bloklaydi
                 }

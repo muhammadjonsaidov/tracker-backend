@@ -64,9 +64,17 @@ app:
       max-batch-size: 50            # 1 request max 50 point
       points-per-minute: 6000       # 1 user/minute (50 point * 120 request/min kabi emas, real limit)
       window-seconds: 60            # fixed-window rate limit
+    retention:
+      archive-after-days: 90        # STOPPED/EXPIRED -> ARCHIVED
+      prune-points-after-days: 30   # raw tracking_points delete (summary qoladi)
+      sweep-interval-seconds: 86400 # 1 sutkada 1 marta
+      batch-sessions: 200           # session update batch
+      batch-points: 20000           # points delete batch
+      run-at-startup: false         # test uchun true qilsa bo‘ladi
 
   security:
     jwt:
       secret: ${JWT_SECRET:change-me-please-change-me-please-change-me-please}
       issuer: tracker-backend
       access-token-minutes: 1440
+      stream-token-minutes: 5

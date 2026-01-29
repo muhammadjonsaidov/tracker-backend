@@ -4,6 +4,7 @@ import com.rhaen.tracker.feature.tracking.expiry.SessionExpiryProperties;
 import com.rhaen.tracker.feature.tracking.history.TrackingHistoryProperties;
 import com.rhaen.tracker.feature.tracking.ingest.TrackingIngestProperties;
 import com.rhaen.tracker.feature.tracking.realtime.LastLocationProperties;
+import com.rhaen.tracker.feature.tracking.retention.RetentionProperties;
 import com.rhaen.tracker.feature.tracking.summary.TrackingSummaryProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -14,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
         TrackingSummaryProperties.class,
         TrackingHistoryProperties.class,
         SessionExpiryProperties.class,
-        TrackingIngestProperties.class
+        TrackingIngestProperties.class,
+        RetentionProperties.class
 })
 public class TrackingRealtimeConfig {}

@@ -69,4 +69,7 @@ public class SessionSummaryEntity {
 
     @Column(name = "bbox_max_lon")
     private Double bboxMaxLon;
+
+    @Column(name = "raw_points_pruned_at")
+    private Instant rawPointsPrunedAt;
 }

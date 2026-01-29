@@ -40,6 +40,15 @@ app:
     summary:
       simplify-epsilon-m: 10      # RDP soddalashtirish (10 metr)
       max-polyline-points: 10000  # juda uzun session bo‘lsa, polyline uchun downsample
+    history:
+      default-max-points: 2000     # points endpoint default limit (downsample)
+      hard-limit-points: 200000    # bundan katta bo‘lsa points endpoint bloklaydi (summary/polyline ishlat)
+    session:
+      expire-seconds: 10           # 5 min: last_point_at shundan eski bo‘lsa EXPIRED
+      no-point-expire-seconds: 10  # 10 min: umuman point kelmagan ACTIVE session expire bo‘ladi
+      sweep-interval-seconds: 5    # job har 60s yuradi
+      sweep-batch-size: 200         # bir martada max nechta session expire qilinsin
+
   security:
     jwt:
       secret: ${JWT_SECRET:change-me-please-change-me-please-change-me-please}

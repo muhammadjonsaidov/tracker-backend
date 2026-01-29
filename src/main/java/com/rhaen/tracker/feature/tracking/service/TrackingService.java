@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -131,6 +132,20 @@ public class TrackingService {
         ));
 
         return entities.size();
+    }
+
+    public List<Map<String, Object>> listSessions(UUID userId) {
+        return sessionRepository.findByUser_IdOrderByStartTimeDesc(userId).stream()
+                .map(s -> {
+                    Map<String, Object> row = new java.util.LinkedHashMap<>();
+                    row.put("sessionId", s.getId());
+                    row.put("startTime", s.getStartTime());
+                    row.put("stopTime", s.getStopTime());
+                    row.put("status", s.getStatus().name());
+                    row.put("lastPointAt", s.getLastPointAt());
+                    return row;
+                })
+                .toList();
     }
 
     private TrackingSessionEntity requireOwnedSession(UUID sessionId, UUID userId) {

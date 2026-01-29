@@ -58,5 +58,5 @@ public class TrackingSessionEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    public enum Status { ACTIVE, STOPPED, ARCHIVED }
+    public enum Status { ACTIVE, STOPPED, ARCHIVED, EXPIRED, ABORTED }
 }

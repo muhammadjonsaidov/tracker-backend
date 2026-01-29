@@ -41,4 +41,10 @@ public class TrackingController {
         int accepted = trackingService.ingestPoints(sessionId, userId, req);
         return ApiResponse.ok("ACCEPTED", java.util.Map.of("accepted", accepted));
     }
+
+    @GetMapping("/sessions")
+    public ApiResponse<?> mySessions(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = UUID.fromString(jwt.getClaimAsString("uid"));
+        return ApiResponse.ok(trackingService.listSessions(userId));
+    }
 }

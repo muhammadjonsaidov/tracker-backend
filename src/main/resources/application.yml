@@ -26,3 +26,10 @@ management:
     web:
       exposure:
         include: health,info,metrics,prometheus
+
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:change-me-please-change-me-please-change-me-please}
+      issuer: tracker-backend
+      access-token-minutes: 1440

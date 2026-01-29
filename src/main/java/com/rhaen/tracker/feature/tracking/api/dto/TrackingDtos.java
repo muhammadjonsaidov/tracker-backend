@@ -9,10 +9,6 @@ import java.util.UUID;
 
 public class TrackingDtos {
 
-    public record StartSessionRequest(
-            @NotNull UUID userId
-    ) {}
-
     public record StartSessionResponse(
             UUID sessionId,
             Instant startTime,

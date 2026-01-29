@@ -24,6 +24,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
     // Cache / realtime (optional for MVP – used later for last_locations)
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'

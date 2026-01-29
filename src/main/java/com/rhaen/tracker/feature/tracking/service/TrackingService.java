@@ -45,9 +45,8 @@ public class TrackingService {
     }
 
     @Transactional
-    public void stopSession(UUID sessionId, TrackingDtos.StopSessionRequest req) {
-        TrackingSessionEntity session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new NotFoundException("Session not found: " + sessionId));
+    public void stopSession(UUID sessionId, UUID userId, TrackingDtos.StopSessionRequest req) {
+        TrackingSessionEntity session = requireOwnedSession(sessionId, userId);
 
         if (session.getStatus() != TrackingSessionEntity.Status.ACTIVE) {
             throw new BadRequestException("Session is not ACTIVE: " + session.getStatus());
@@ -65,9 +64,8 @@ public class TrackingService {
     }
 
     @Transactional
-    public int ingestPoints(UUID sessionId, TrackingDtos.IngestPointsRequest req) {
-        TrackingSessionEntity session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new NotFoundException("Session not found: " + sessionId));
+    public int ingestPoints(UUID sessionId, UUID userId, TrackingDtos.IngestPointsRequest req) {
+        TrackingSessionEntity session = requireOwnedSession(sessionId, userId);
 
         if (session.getStatus() != TrackingSessionEntity.Status.ACTIVE) {
             throw new BadRequestException("Session is not ACTIVE: " + session.getStatus());
@@ -90,7 +88,7 @@ public class TrackingService {
         pointRepository.saveAll(entities);
 
         // Update session "last known"
-        TrackingPointEntity last = entities.get(entities.size() - 1);
+        TrackingPointEntity last = entities.getLast();
         if (session.getStartPoint() == null) {
             session.setStartPoint(last.getPoint());
         }
@@ -100,5 +98,15 @@ public class TrackingService {
         sessionRepository.save(session);
 
         return entities.size();
+    }
+
+    private TrackingSessionEntity requireOwnedSession(UUID sessionId, UUID userId) {
+        TrackingSessionEntity session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NotFoundException("Session not found: " + sessionId));
+
+        if (!session.getUser().getId().equals(userId)) {
+            throw new BadRequestException("Session does not belong to user");
+        }
+        return session;
     }
 }

@@ -85,19 +85,20 @@ public class LastLocationCache {
         return Duration.between(ts, Instant.now()).getSeconds() > props.staleSeconds();
     }
 
-    private Map<String, Object> toAdminPayload(LastLocationSnapshot snap) {
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("userId", snap.userId());
-        payload.put("sessionId", snap.sessionId());
-        payload.put("status", snap.status());
-        payload.put("active", snap.active());
-        payload.put("ts", snap.ts());
-        payload.put("lat", snap.lat());
-        payload.put("lon", snap.lon());
-        payload.put("accuracyM", snap.accuracyM());
-        payload.put("speedMps", snap.speedMps());
-        payload.put("headingDeg", snap.headingDeg());
-        return payload;
+    private com.rhaen.tracker.feature.tracking.realtime.dto.LastLocationEvent toAdminPayload(LastLocationSnapshot snap) {
+        return new com.rhaen.tracker.feature.tracking.realtime.dto.LastLocationEvent(
+                snap.userId(),
+                snap.sessionId(),
+                snap.status(),
+                snap.active(),
+                isStale(snap),
+                snap.ts(),
+                snap.lat(),
+                snap.lon(),
+                snap.accuracyM(),
+                snap.speedMps(),
+                snap.headingDeg()
+        );
     }
 
 }

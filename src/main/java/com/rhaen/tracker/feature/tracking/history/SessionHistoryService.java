@@ -2,7 +2,7 @@ package com.rhaen.tracker.feature.tracking.history;
 
 import com.rhaen.tracker.common.exception.BadRequestException;
 import com.rhaen.tracker.common.exception.NotFoundException;
-import com.rhaen.tracker.feature.admin.api.dto.AdminDtos;
+import com.rhaen.tracker.feature.tracking.dto.TrackingDtos;
 import com.rhaen.tracker.feature.tracking.persistence.TrackingPointEntity;
 import com.rhaen.tracker.feature.tracking.persistence.TrackingPointRepository;
 import com.rhaen.tracker.feature.tracking.persistence.TrackingSessionRepository;
@@ -23,7 +23,7 @@ public class SessionHistoryService {
     private final TrackingPointRepository pointRepository;
     private final TrackingHistoryProperties props;
 
-    public List<AdminDtos.PointRow> getSessionPoints(UUID sessionId, Instant from, Instant to, Integer maxPoints) {
+    public List<TrackingDtos.PointRow> getSessionPoints(UUID sessionId, Instant from, Instant to, Integer maxPoints) {
         // session mavjudligini tekshir
         sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new NotFoundException("Session not found: " + sessionId));
@@ -60,12 +60,12 @@ public class SessionHistoryService {
         return map(sampled);
     }
 
-    private List<AdminDtos.PointRow> map(List<TrackingPointEntity> points) {
+    private List<TrackingDtos.PointRow> map(List<TrackingPointEntity> points) {
         return points.stream().map(p -> {
             Point g = p.getPoint();
             double lon = g.getX();
             double lat = g.getY();
-            return new AdminDtos.PointRow(
+            return new TrackingDtos.PointRow(
                     p.getDeviceTimestamp(),
                     lat,
                     lon,

@@ -23,7 +23,7 @@ spring:
   data:
     redis:
       host: ${REDIS_HOST:tracker-redis}
-      port: ${REDIS_PORT}
+      port: ${REDIS_PORT:6379}
       timeout: 3s
 
 management:
@@ -74,7 +74,7 @@ app:
 
   security:
     jwt:
-      secret: ${JWT_SECRET:change-me-please-change-me-please-change-me-please}
+      secret: ${JWT_SECRET}
       issuer: tracker-backend
       access-token-minutes: 1440
       stream-token-minutes: 5

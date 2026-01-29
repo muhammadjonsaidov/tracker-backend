@@ -1,147 +1,80 @@
 package com.rhaen.tracker.feature.admin.api;
 
 import com.rhaen.tracker.common.response.ApiResponse;
-import com.rhaen.tracker.feature.admin.api.dto.AdminDtos;
-import com.rhaen.tracker.feature.tracking.history.SessionHistoryService;
-import com.rhaen.tracker.feature.tracking.persistence.SessionSummaryRepository;
+import com.rhaen.tracker.feature.admin.dto.AdminDtos;
+import com.rhaen.tracker.feature.admin.query.AdminQueryService;
+import com.rhaen.tracker.feature.tracking.dto.TrackingDtos;
 import com.rhaen.tracker.feature.tracking.persistence.TrackingSessionEntity;
-import com.rhaen.tracker.feature.tracking.persistence.TrackingSessionRepository;
-import com.rhaen.tracker.feature.tracking.realtime.LastLocationCache;
-import com.rhaen.tracker.feature.user.persistence.UserRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/admin")
+@Tag(name = "Admin", description = "Admin endpoints")
+@SecurityRequirement(name = "bearerAuth")
 public class AdminController {
 
-    private final UserRepository userRepository;
-    private final LastLocationCache lastLocationCache;
-    private final TrackingSessionRepository sessionRepository;
-    private final SessionSummaryRepository sessionSummaryRepository;
-    private final SessionHistoryService sessionHistoryService;
+    private final AdminQueryService adminQueryService;
 
     @GetMapping("/users")
-    public ApiResponse<?> users() {
-        var items = userRepository.findAll().stream()
-                .map(u -> new AdminDtos.UserRow(
-                        u.getId(),
-                        u.getUsername(),
-                        u.getEmail(),
-                        u.getRole().name(),
-                        u.getCreatedAt()
-                ))
-                .toList();
-        return ApiResponse.ok(items);
+    @Operation(summary = "Users list", description = "List users without sensitive fields.")
+    public ApiResponse<List<AdminDtos.UserRow>> users() {
+        return ApiResponse.ok(adminQueryService.listUsers());
     }
 
-    /**
-     * Dashboard use-case:
-     * - show realtime or last known locations for all users
-     * For MVP we return each user's ACTIVE session (if any) with lastPoint.
-     */
     @GetMapping("/users/last-locations")
-    public ApiResponse<?> lastLocations() {
-        var items = lastLocationCache.getAll().stream()
-                .map(this::lastLocationRow)
-                // active first, then newest
-                .sorted((a, b) -> {
-                    boolean aActive = Boolean.TRUE.equals(a.get("active"));
-                    boolean bActive = Boolean.TRUE.equals(b.get("active"));
-                    if (aActive != bActive) return aActive ? -1 : 1;
-                    var ta = (java.time.Instant) a.get("ts");
-                    var tb = (java.time.Instant) b.get("ts");
-                    if (ta == null && tb == null) return 0;
-                    if (ta == null) return 1;
-                    if (tb == null) return -1;
-                    return tb.compareTo(ta);
-                })
-                .toList();
-
-        return ApiResponse.ok(items);
+    @Operation(summary = "Last locations", description = "Returns last known locations for all users.")
+    public ApiResponse<List<AdminDtos.LastLocationRow>> lastLocations() {
+        return ApiResponse.ok(adminQueryService.listLastLocations());
     }
 
     @GetMapping("/sessions/{sessionId}/points")
-    public ApiResponse<?> sessionPoints(@PathVariable UUID sessionId,
-                                        @RequestParam(required = false) Instant from,
-                                        @RequestParam(required = false) Instant to,
-                                        @RequestParam(required = false) Integer max) {
-        return ApiResponse.ok(sessionHistoryService.getSessionPoints(sessionId, from, to, max));
+    @Operation(summary = "Session points", description = "Returns raw points with optional window + downsample.")
+    public ApiResponse<List<TrackingDtos.PointRow>> sessionPoints(
+            @PathVariable UUID sessionId,
+            @Parameter(description = "From timestamp (UTC)", example = "2026-01-29T10:00:00Z")
+            @RequestParam(required = false) Instant from,
+            @Parameter(description = "To timestamp (UTC)", example = "2026-01-29T11:00:00Z")
+            @RequestParam(required = false) Instant to,
+            @Parameter(description = "Max points to return", example = "2000")
+            @RequestParam(required = false) Integer max) {
+        return ApiResponse.ok(adminQueryService.getSessionPoints(sessionId, from, to, max));
     }
 
     @GetMapping("/sessions/{sessionId}/summary")
-    public ApiResponse<?> sessionSummary(@PathVariable UUID sessionId) {
-        var summary = sessionSummaryRepository.findById(sessionId)
-                .orElseThrow(() -> new com.rhaen.tracker.common.exception.NotFoundException("Summary not found for session: " + sessionId));
-        var bbox = new java.util.LinkedHashMap<String, Object>();
-        bbox.put("minLat", summary.getBboxMinLat());
-        bbox.put("minLon", summary.getBboxMinLon());
-        bbox.put("maxLat", summary.getBboxMaxLat());
-        bbox.put("maxLon", summary.getBboxMaxLon());
-
-        var payload = new java.util.LinkedHashMap<String, Object>();
-        payload.put("sessionId", sessionId);
-        payload.put("polyline", summary.getPolyline());
-        payload.put("simplifiedPolyline", summary.getSimplifiedPolyline());
-        payload.put("distanceM", summary.getDistanceM());
-        payload.put("durationS", summary.getDurationS());
-        payload.put("avgSpeedMps", summary.getAvgSpeedMps());
-        payload.put("maxSpeedMps", summary.getMaxSpeedMps());
-        payload.put("pointsCount", summary.getPointsCount());
-        payload.put("bbox", bbox);
-        return ApiResponse.ok(payload);
+    @Operation(summary = "Session summary", description = "Returns precomputed session summary.")
+    public ApiResponse<AdminDtos.SessionSummaryResponse> sessionSummary(@PathVariable UUID sessionId) {
+        return ApiResponse.ok(adminQueryService.getSessionSummary(sessionId));
     }
 
     @GetMapping("/sessions")
-    public ApiResponse<?> sessions(@RequestParam(required = false) UUID userId,
-                                   @RequestParam(required = false) TrackingSessionEntity.Status status,
-                                   @RequestParam(required = false) Instant from,
-                                   @RequestParam(required = false) Instant to,
-                                   @RequestParam(defaultValue = "0") int page,
-                                   @RequestParam(defaultValue = "20") int size) {
-
-        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "startTime"));
-        var p = sessionRepository.search(userId, status, from, to, pageable);
-
-        var items = p.getContent().stream()
-                .map(s -> new AdminDtos.SessionRow(
-                        s.getId(),
-                        s.getUser().getId(),
-                        s.getUser().getUsername(),
-                        s.getStartTime(),
-                        s.getStopTime(),
-                        s.getStatus().name(),
-                        s.getLastPointAt()
-                ))
-                .toList();
-
-        return ApiResponse.ok(java.util.Map.of(
-                "items", items,
-                "page", p.getNumber(),
-                "size", p.getSize(),
-                "totalElements", p.getTotalElements(),
-                "totalPages", p.getTotalPages()
-        ));
-    }
-
-    private java.util.Map<String, Object> lastLocationRow(com.rhaen.tracker.feature.tracking.realtime.LastLocationSnapshot snap) {
-        var row = new java.util.LinkedHashMap<String, Object>();
-        row.put("userId", snap.userId());
-        row.put("sessionId", snap.sessionId());
-        row.put("status", snap.status());
-        row.put("active", snap.active());
-        row.put("stale", lastLocationCache.isStale(snap));
-        row.put("ts", snap.ts());
-        row.put("lat", snap.lat());
-        row.put("lon", snap.lon());
-        row.put("accuracyM", snap.accuracyM());
-        row.put("speedMps", snap.speedMps());
-        return row;
+    @Operation(summary = "Sessions list", description = "Search sessions with filters + pagination.")
+    public ApiResponse<AdminDtos.SessionPage> sessions(
+            @Parameter(description = "Filter by user id")
+            @RequestParam(required = false) UUID userId,
+            @Parameter(description = "Filter by status")
+            @RequestParam(required = false) TrackingSessionEntity.Status status,
+            @Parameter(description = "From timestamp (UTC)")
+            @RequestParam(required = false) Instant from,
+            @Parameter(description = "To timestamp (UTC)")
+            @RequestParam(required = false) Instant to,
+            @Parameter(description = "Page index")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size")
+            @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.ok(adminQueryService.listSessions(userId, status, from, to, page, size));
     }
 }

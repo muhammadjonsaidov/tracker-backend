@@ -1,23 +1,21 @@
 package com.rhaen.tracker.common.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.Builder;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
 
-@Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiResponse<T>(
+        @Schema(description = "Response timestamp (UTC)")
         Instant timestamp,
+        @Schema(description = "Response message")
         String message,
+        @Schema(description = "Response data")
         T data
 ) {
     public static <T> ApiResponse<T> ok(String message, T data) {
-        return ApiResponse.<T>builder()
-                .timestamp(Instant.now())
-                .message(message)
-                .data(data)
-                .build();
+        return new ApiResponse<>(Instant.now(), message, data);
     }
 
     public static <T> ApiResponse<T> ok(T data) {

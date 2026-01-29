@@ -5,6 +5,9 @@ import com.rhaen.tracker.feature.tracking.persistence.TrackingSessionRepository;
 import com.rhaen.tracker.feature.tracking.realtime.LastLocationCache;
 import com.rhaen.tracker.feature.tracking.realtime.LastLocationSnapshot;
 import com.rhaen.tracker.feature.tracking.summary.SessionSummaryService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Point;
 import org.springframework.data.domain.PageRequest;
@@ -23,6 +26,14 @@ public class SessionExpiryJob {
     private final SessionSummaryService sessionSummaryService;
     private final LastLocationCache lastLocationCache;
     private final SessionExpiryProperties props;
+    private final MeterRegistry meterRegistry;
+
+    private Counter expiredCounter;
+
+    @PostConstruct
+    void init() {
+        expiredCounter = meterRegistry.counter("tracker.session.expired.total");
+    }
 
     @Scheduled(fixedDelayString = "${app.tracking.session.sweep-interval-seconds:60}000")
     @Transactional
@@ -76,5 +87,7 @@ public class SessionExpiryJob {
                     null, null, null
             ));
         }
+
+        expiredCounter.increment();
     }
 }

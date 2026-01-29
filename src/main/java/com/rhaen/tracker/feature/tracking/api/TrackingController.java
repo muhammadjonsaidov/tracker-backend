@@ -38,8 +38,12 @@ public class TrackingController {
                                       @AuthenticationPrincipal Jwt jwt,
                                       @Valid @RequestBody TrackingDtos.IngestPointsRequest req) {
         UUID userId = UUID.fromString(jwt.getClaimAsString("uid"));
-        int accepted = trackingService.ingestPoints(sessionId, userId, req);
-        return ApiResponse.ok("ACCEPTED", java.util.Map.of("accepted", accepted));
+        int inserted = trackingService.ingestPoints(sessionId, userId, req);
+        int accepted = req.points().size();
+        return ApiResponse.ok("ACCEPTED", java.util.Map.of(
+                "accepted", accepted,
+                "inserted", inserted
+        ));
     }
 
     @GetMapping("/sessions")

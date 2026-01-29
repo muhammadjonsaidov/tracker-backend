@@ -41,4 +41,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.ok("Internal error: " + ex.getClass().getSimpleName(), null));
     }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ApiResponse<Void>> tooMany(TooManyRequestsException ex) {
+        return ResponseEntity.status(429).body(ApiResponse.ok(ex.getMessage(), null));
+    }
+
 }

@@ -1,5 +1,7 @@
 package com.rhaen.tracker.feature.tracking.api.dto;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
@@ -23,9 +25,17 @@ public class TrackingDtos {
 
     public record LocationPoint(
             UUID eventId,
-            @NotNull Double lat,
-            @NotNull Double lon,
+
+            @NotNull
+            @DecimalMin(value = "-90.0") @DecimalMax(value = "90.0")
+            Double lat,
+
+            @NotNull
+            @DecimalMin(value = "-180.0") @DecimalMax(value = "180.0")
+            Double lon,
+
             @NotNull Instant deviceTimestamp,
+
             Float accuracyM,
             Float speedMps,
             Float headingDeg,

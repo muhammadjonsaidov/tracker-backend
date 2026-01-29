@@ -2,19 +2,31 @@ package com.rhaen.tracker.feature.tracking.service;
 
 import com.rhaen.tracker.common.exception.BadRequestException;
 import com.rhaen.tracker.common.exception.NotFoundException;
+import com.rhaen.tracker.common.exception.TooManyRequestsException;
 import com.rhaen.tracker.common.util.GeoUtils;
 import com.rhaen.tracker.feature.tracking.api.dto.TrackingDtos;
-import com.rhaen.tracker.feature.tracking.persistence.*;
+import com.rhaen.tracker.feature.tracking.ingest.RedisRateLimiter;
+import com.rhaen.tracker.feature.tracking.ingest.TrackingIngestProperties;
+import com.rhaen.tracker.feature.tracking.ingest.TrackingPointIngestRepository;
+import com.rhaen.tracker.feature.tracking.persistence.TrackingSessionEntity;
+import com.rhaen.tracker.feature.tracking.persistence.TrackingSessionRepository;
 import com.rhaen.tracker.feature.tracking.realtime.LastLocationCache;
 import com.rhaen.tracker.feature.tracking.realtime.LastLocationSnapshot;
 import com.rhaen.tracker.feature.tracking.summary.SessionSummaryService;
 import com.rhaen.tracker.feature.user.persistence.UserEntity;
 import com.rhaen.tracker.feature.user.persistence.UserRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+
 import java.time.Instant;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -25,9 +37,25 @@ public class TrackingService {
 
     private final UserRepository userRepository;
     private final TrackingSessionRepository sessionRepository;
-    private final TrackingPointRepository pointRepository;
+
     private final LastLocationCache lastLocationCache;
     private final SessionSummaryService sessionSummaryService;
+
+    // Step 8 deps
+    private final TrackingIngestProperties ingestProps;
+    private final RedisRateLimiter rateLimiter;
+    private final TrackingPointIngestRepository ingestRepository;
+
+    private final MeterRegistry meterRegistry;
+
+    private Counter sessionStartCounter;
+    private Counter sessionStopCounter;
+
+    private Counter ingestRequestsCounter;
+    private Counter pointsAcceptedCounter;
+    private Counter pointsInsertedCounter;
+
+    private Timer ingestTimer;
 
     @Transactional
     public TrackingDtos.StartSessionResponse startSession(UUID userId) {
@@ -47,7 +75,13 @@ public class TrackingService {
 
         session = sessionRepository.save(session);
 
-        return new TrackingDtos.StartSessionResponse(session.getId(), session.getStartTime(), session.getStatus().name());
+        sessionStartCounter.increment();
+
+        return new TrackingDtos.StartSessionResponse(
+                session.getId(),
+                session.getStartTime(),
+                session.getStatus().name()
+        );
     }
 
     @Transactional
@@ -58,32 +92,47 @@ public class TrackingService {
             throw new BadRequestException("Session is not ACTIVE: " + session.getStatus());
         }
 
-        session.setStopTime(req.stopTime() != null ? req.stopTime() : Instant.now());
-        session.setStatus(TrackingSessionEntity.Status.STOPPED);
-        sessionSummaryService.buildOrRebuild(session);
+        Instant stopTime = (req.stopTime() != null) ? req.stopTime() : Instant.now();
+        session.setStopTime(stopTime);
+
+        // Stop point priority:
+        // 1) request coords
+        // 2) lastPoint
         if (req.stopLat() != null && req.stopLon() != null) {
             session.setStopPoint(GeoUtils.point(req.stopLon(), req.stopLat()));
+        } else if (session.getStopPoint() == null && session.getLastPoint() != null) {
+            session.setStopPoint(session.getLastPoint());
         }
+
+        session.setStatus(TrackingSessionEntity.Status.STOPPED);
         session.setUpdatedAt(Instant.now());
         sessionRepository.save(session);
 
-        var p = session.getStopPoint() != null ? session.getStopPoint() : session.getLastPoint();
+        // Summary rebuild AFTER session has final stop_time/status/stop_point
+        sessionSummaryService.buildOrRebuild(session);
+
+        // Update Redis last_location (active=false)
+        var p = (session.getStopPoint() != null) ? session.getStopPoint() : session.getLastPoint();
         if (p != null) {
             lastLocationCache.upsert(new LastLocationSnapshot(
                     session.getUser().getId(),
                     session.getId(),
                     session.getStatus().name(),
-                    false,                 // tracking off
+                    false,
                     p.getY(),
                     p.getX(),
-                    session.getStopTime() != null ? session.getStopTime() : Instant.now(),
+                    stopTime,
                     null, null, null
             ));
         }
 
-        // Next step (you'll implement): generate session_summary (polyline, distance, duration)
+        sessionStopCounter.increment();
     }
 
+    /**
+     * Returns: inserted rows count (DB level).
+     * NOTE: accepted points = req.points().size()
+     */
     @Transactional
     public int ingestPoints(UUID sessionId, UUID userId, TrackingDtos.IngestPointsRequest req) {
         TrackingSessionEntity session = requireOwnedSession(sessionId, userId);
@@ -92,52 +141,94 @@ public class TrackingService {
             throw new BadRequestException("Session is not ACTIVE: " + session.getStatus());
         }
 
-        List<TrackingPointEntity> entities = req.points().stream().map(p -> TrackingPointEntity.builder()
-                .session(session)
-                .eventId(p.eventId() != null ? p.eventId() : UUID.randomUUID())
-                .deviceTimestamp(p.deviceTimestamp())
-                .receivedAt(Instant.now())
-                .point(GeoUtils.point(p.lon(), p.lat()))
-                .accuracyM(p.accuracyM())
-                .speedMps(p.speedMps())
-                .headingDeg(p.headingDeg())
-                .provider(p.provider())
-                .mock(Boolean.TRUE.equals(p.mock()))
-                .build()
-        ).toList();
+        Timer.Sample sample = Timer.start(meterRegistry);
+        ingestRequestsCounter.increment();
 
-        pointRepository.saveAll(entities);
+        int rawCount = req.points().size();
+        pointsAcceptedCounter.increment(rawCount);
 
-        // Update session "last known"
-        TrackingPointEntity last = entities.getLast();
-        if (session.getStartPoint() == null) {
-            session.setStartPoint(last.getPoint());
+        try {
+            // Guard: max batch size
+            if (rawCount > ingestProps.maxBatchSize()) {
+                throw new BadRequestException("Too many points in one request: " + rawCount
+                        + ". Max is " + ingestProps.maxBatchSize());
+            }
+
+            // Rate limit: points/minute (fixed window)
+            var rl = rateLimiter.consumePoints(userId, rawCount);
+            if (!rl.allowed()) {
+                throw new TooManyRequestsException("Rate limit exceeded (points/min). Current=" + rl.current());
+            }
+
+            // Dedupe inside the same batch by eventId (keep first occurrence)
+            Map<UUID, TrackingPointIngestRepository.IngestPointRow> unique = new LinkedHashMap<>();
+            for (TrackingDtos.LocationPoint p : req.points()) {
+                UUID eid = (p.eventId() != null) ? p.eventId() : UUID.randomUUID();
+
+                unique.putIfAbsent(eid, new TrackingPointIngestRepository.IngestPointRow(
+                        eid,
+                        p.lat(),
+                        p.lon(),
+                        p.deviceTimestamp(),
+                        p.accuracyM(),
+                        p.speedMps(),
+                        p.headingDeg(),
+                        p.provider(),
+                        Boolean.TRUE.equals(p.mock())
+                ));
+            }
+
+            List<TrackingPointIngestRepository.IngestPointRow> rows = unique.values().stream().toList();
+            if (rows.isEmpty()) return 0;
+
+            Instant receivedAt = Instant.now();
+
+            // Insert points with ON CONFLICT DO NOTHING (no crash on duplicates)
+            int inserted = ingestRepository.insertBatch(session.getId(), receivedAt, rows);
+
+            // Find earliest + latest by device timestamp
+            var earliest = rows.stream()
+                    .min(Comparator.comparing(TrackingPointIngestRepository.IngestPointRow::deviceTimestamp))
+                    .orElseThrow();
+
+            var latest = rows.stream()
+                    .max(Comparator.comparing(TrackingPointIngestRepository.IngestPointRow::deviceTimestamp))
+                    .orElseThrow();
+
+            // Update session "last known"
+            if (session.getStartPoint() == null) {
+                session.setStartPoint(GeoUtils.point(earliest.lon(), earliest.lat()));
+            }
+            session.setLastPoint(GeoUtils.point(latest.lon(), latest.lat()));
+            session.setLastPointAt(latest.deviceTimestamp());
+            session.setUpdatedAt(Instant.now());
+            sessionRepository.save(session);
+
+            // Update Redis last_location (active=true)
+            lastLocationCache.upsert(new LastLocationSnapshot(
+                    session.getUser().getId(),
+                    session.getId(),
+                    session.getStatus().name(),
+                    true,
+                    latest.lat(),
+                    latest.lon(),
+                    latest.deviceTimestamp(),
+                    latest.accuracyM(),
+                    latest.speedMps(),
+                    latest.headingDeg()
+            ));
+
+            pointsInsertedCounter.increment(inserted);
+            return inserted;
+        } finally {
+            sample.stop(ingestTimer);
         }
-        session.setLastPoint(last.getPoint());
-        session.setLastPointAt(last.getDeviceTimestamp());
-        session.setUpdatedAt(Instant.now());
-        sessionRepository.save(session);
-
-        lastLocationCache.upsert(new LastLocationSnapshot(
-                session.getUser().getId(),
-                session.getId(),
-                session.getStatus().name(),
-                session.getStatus() == TrackingSessionEntity.Status.ACTIVE,
-                last.getPoint().getY(),   // lat
-                last.getPoint().getX(),   // lon
-                last.getDeviceTimestamp(),
-                last.getAccuracyM(),
-                last.getSpeedMps(),
-                last.getHeadingDeg()
-        ));
-
-        return entities.size();
     }
 
     public List<Map<String, Object>> listSessions(UUID userId) {
         return sessionRepository.findByUser_IdOrderByStartTimeDesc(userId).stream()
                 .map(s -> {
-                    Map<String, Object> row = new java.util.LinkedHashMap<>();
+                    Map<String, Object> row = new LinkedHashMap<>();
                     row.put("sessionId", s.getId());
                     row.put("startTime", s.getStartTime());
                     row.put("stopTime", s.getStopTime());
@@ -146,6 +237,21 @@ public class TrackingService {
                     return row;
                 })
                 .toList();
+    }
+
+    @PostConstruct
+    void initMetrics() {
+        sessionStartCounter = Counter.builder("tracker.session.start.total").register(meterRegistry);
+        sessionStopCounter  = Counter.builder("tracker.session.stop.total").register(meterRegistry);
+
+        ingestRequestsCounter = Counter.builder("tracker.ingest.requests.total").register(meterRegistry);
+        pointsAcceptedCounter = Counter.builder("tracker.ingest.points.accepted.total").register(meterRegistry);
+        pointsInsertedCounter = Counter.builder("tracker.ingest.points.inserted.total").register(meterRegistry);
+
+        ingestTimer = Timer.builder("tracker.ingest.duration")
+                .description("Ingest processing duration")
+                .publishPercentileHistogram()
+                .register(meterRegistry);
     }
 
     private TrackingSessionEntity requireOwnedSession(UUID sessionId, UUID userId) {

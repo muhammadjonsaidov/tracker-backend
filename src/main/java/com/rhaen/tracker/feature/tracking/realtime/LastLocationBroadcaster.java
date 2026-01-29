@@ -1,5 +1,8 @@
 package com.rhaen.tracker.feature.tracking.realtime;
 
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -13,6 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Service
 @RequiredArgsConstructor
 public class LastLocationBroadcaster {
+    private final MeterRegistry meterRegistry;
 
     private final CopyOnWriteArrayList<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
@@ -54,6 +58,13 @@ public class LastLocationBroadcaster {
                 emitters.remove(emitter);
             }
         }
+    }
+
+    @PostConstruct
+    void registerMetrics() {
+        Gauge.builder("tracker.sse.connections", emitters, list -> (double) list.size())
+                .description("Active SSE connections")
+                .register(meterRegistry);
     }
 
     public int connections() {

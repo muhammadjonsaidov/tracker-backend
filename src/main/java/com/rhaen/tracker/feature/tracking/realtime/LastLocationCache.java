@@ -22,6 +22,7 @@ public class LastLocationCache {
     private final StringRedisTemplate redis;
     private final ObjectMapper objectMapper;
     private final LastLocationProperties props;
+    private final LastLocationBroadcaster broadcaster;
 
     public void upsert(LastLocationSnapshot snap) {
         try {
@@ -30,6 +31,9 @@ public class LastLocationCache {
 
             redis.opsForValue().set(key, json, Duration.ofMinutes(props.ttlMinutes()));
             redis.opsForSet().add(USERS_SET, snap.userId().toString());
+
+            // 🔴 realtime push (admin stream)
+            broadcaster.broadcastUpdate(toAdminPayload(snap));
         } catch (JsonProcessingException e) {
             // cache failure should not break ingest
         }
@@ -83,4 +87,20 @@ public class LastLocationCache {
         if (ts == null) return true;
         return Duration.between(ts, Instant.now()).getSeconds() > props.staleSeconds();
     }
+
+    private Map<String, Object> toAdminPayload(LastLocationSnapshot snap) {
+        return Map.of(
+                "userId", snap.userId(),
+                "sessionId", snap.sessionId(),
+                "status", snap.status(),
+                "active", snap.active(),
+                "ts", snap.ts(),
+                "lat", snap.lat(),
+                "lon", snap.lon(),
+                "accuracyM", snap.accuracyM(),
+                "speedMps", snap.speedMps(),
+                "headingDeg", snap.headingDeg()
+        );
+    }
+
 }

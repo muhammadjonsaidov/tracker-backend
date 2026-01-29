@@ -1,0 +1,35 @@
+package com.rhaen.tracker.feature.tracking.api;
+
+import com.rhaen.tracker.common.response.ApiResponse;
+import com.rhaen.tracker.feature.tracking.api.dto.TrackingDtos;
+import com.rhaen.tracker.feature.tracking.service.TrackingService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/v1/tracking")
+public class TrackingController {
+
+    private final TrackingService trackingService;
+
+    @PostMapping("/sessions/start")
+    public ApiResponse<TrackingDtos.StartSessionResponse> start(@Valid @RequestBody TrackingDtos.StartSessionRequest req) {
+        return ApiResponse.ok(trackingService.startSession(req.userId()));
+    }
+
+    @PostMapping("/sessions/{sessionId}/stop")
+    public ApiResponse<Void> stop(@PathVariable UUID sessionId, @RequestBody TrackingDtos.StopSessionRequest req) {
+        trackingService.stopSession(sessionId, req);
+        return ApiResponse.ok("STOPPED", null);
+    }
+
+    @PostMapping("/sessions/{sessionId}/points")
+    public ApiResponse<Object> ingest(@PathVariable UUID sessionId, @Valid @RequestBody TrackingDtos.IngestPointsRequest req) {
+        int accepted = trackingService.ingestPoints(sessionId, req);
+        return ApiResponse.ok("ACCEPTED", java.util.Map.of("accepted", accepted));
+    }
+}

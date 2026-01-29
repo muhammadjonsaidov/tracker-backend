@@ -56,9 +56,9 @@ app:
       default-max-points: 2000     # points endpoint default limit (downsample)
       hard-limit-points: 200000    # bundan katta bo‘lsa points endpoint bloklaydi (summary/polyline ishlat)
     session:
-      expire-seconds: 10           # 300 - 5 min: last_point_at shundan eski bo‘lsa EXPIRED
-      no-point-expire-seconds: 10  # 600 - 10 min: umuman point kelmagan ACTIVE session expire bo‘ladi
-      sweep-interval-seconds: 5    # 60 - job har 60s yuradi
+      expire-seconds: 300           # 300 - 5 min: last_point_at shundan eski bo‘lsa EXPIRED
+      no-point-expire-seconds: 600  # 600 - 10 min: umuman point kelmagan ACTIVE session expire bo‘ladi
+      sweep-interval-seconds: 60    # 60 - job har 60s yuradi
       sweep-batch-size: 200        # 200 - bir martada max nechta session expire qilinsin
     ingest:
       max-batch-size: 50            # 1 request max 50 point

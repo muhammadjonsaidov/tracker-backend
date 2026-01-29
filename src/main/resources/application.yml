@@ -20,6 +20,11 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:tracker-redis}
+      port: ${REDIS_PORT}
+      timeout: 3s
 
 management:
   endpoints:
@@ -28,6 +33,10 @@ management:
         include: health,info,metrics,prometheus
 
 app:
+  tracking:
+    last-location:
+      ttl-minutes: 43200   # 30 kun (dashboard last stop ham turishi uchun)
+      stale-seconds: 120   # ACTIVE bo‘lsa 2 min update kelmasa stale=true
   security:
     jwt:
       secret: ${JWT_SECRET:change-me-please-change-me-please-change-me-please}

@@ -5,6 +5,8 @@ import com.rhaen.tracker.common.exception.NotFoundException;
 import com.rhaen.tracker.common.util.GeoUtils;
 import com.rhaen.tracker.feature.tracking.api.dto.TrackingDtos;
 import com.rhaen.tracker.feature.tracking.persistence.*;
+import com.rhaen.tracker.feature.tracking.realtime.LastLocationCache;
+import com.rhaen.tracker.feature.tracking.realtime.LastLocationSnapshot;
 import com.rhaen.tracker.feature.user.persistence.UserEntity;
 import com.rhaen.tracker.feature.user.persistence.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ public class TrackingService {
     private final UserRepository userRepository;
     private final TrackingSessionRepository sessionRepository;
     private final TrackingPointRepository pointRepository;
+    private final LastLocationCache lastLocationCache;
 
     @Transactional
     public TrackingDtos.StartSessionResponse startSession(UUID userId) {
@@ -60,6 +63,20 @@ public class TrackingService {
         session.setUpdatedAt(Instant.now());
         sessionRepository.save(session);
 
+        var p = session.getStopPoint() != null ? session.getStopPoint() : session.getLastPoint();
+        if (p != null) {
+            lastLocationCache.upsert(new LastLocationSnapshot(
+                    session.getUser().getId(),
+                    session.getId(),
+                    session.getStatus().name(),
+                    false,                 // tracking off
+                    p.getY(),
+                    p.getX(),
+                    session.getStopTime() != null ? session.getStopTime() : Instant.now(),
+                    null, null, null
+            ));
+        }
+
         // Next step (you'll implement): generate session_summary (polyline, distance, duration)
     }
 
@@ -96,6 +113,19 @@ public class TrackingService {
         session.setLastPointAt(last.getDeviceTimestamp());
         session.setUpdatedAt(Instant.now());
         sessionRepository.save(session);
+
+        lastLocationCache.upsert(new LastLocationSnapshot(
+                session.getUser().getId(),
+                session.getId(),
+                session.getStatus().name(),
+                session.getStatus() == TrackingSessionEntity.Status.ACTIVE,
+                last.getPoint().getY(),   // lat
+                last.getPoint().getX(),   // lon
+                last.getDeviceTimestamp(),
+                last.getAccuracyM(),
+                last.getSpeedMps(),
+                last.getHeadingDeg()
+        ));
 
         return entities.size();
     }

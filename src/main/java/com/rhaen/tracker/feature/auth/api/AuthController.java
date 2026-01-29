@@ -1,6 +1,7 @@
-package com.rhaen.tracker.feature.auth.api.dto;
+package com.rhaen.tracker.feature.auth.api;
 
 import com.rhaen.tracker.common.response.ApiResponse;
+import com.rhaen.tracker.feature.auth.api.dto.AuthDtos;
 import com.rhaen.tracker.feature.auth.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

@@ -1,9 +1,13 @@
 package com.rhaen.tracker.config;
 
 import com.rhaen.tracker.feature.tracking.realtime.LastLocationProperties;
+import com.rhaen.tracker.feature.tracking.summary.TrackingSummaryProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@EnableConfigurationProperties(LastLocationProperties.class)
+@EnableConfigurationProperties({
+        LastLocationProperties.class,
+        TrackingSummaryProperties.class
+})
 public class TrackingRealtimeConfig {}

@@ -1,6 +1,7 @@
 package com.rhaen.tracker.feature.admin.api;
 
 import com.rhaen.tracker.common.response.ApiResponse;
+import com.rhaen.tracker.feature.tracking.persistence.SessionSummaryRepository;
 import com.rhaen.tracker.feature.tracking.persistence.TrackingPointRepository;
 import com.rhaen.tracker.feature.tracking.realtime.LastLocationCache;
 import com.rhaen.tracker.feature.user.persistence.UserRepository;
@@ -17,6 +18,7 @@ public class AdminController {
     private final UserRepository userRepository;
     private final TrackingPointRepository pointRepository;
     private final LastLocationCache lastLocationCache;
+    private final SessionSummaryRepository sessionSummaryRepository;
 
     @GetMapping("/users")
     public ApiResponse<?> users() {
@@ -63,5 +65,27 @@ public class AdminController {
     @GetMapping("/sessions/{sessionId}/points")
     public ApiResponse<?> sessionPoints(@PathVariable UUID sessionId) {
         return ApiResponse.ok(pointRepository.findBySessionIdOrderByDeviceTimestampAsc(sessionId));
+    }
+
+    @GetMapping("/sessions/{sessionId}/summary")
+    public ApiResponse<?> sessionSummary(@PathVariable UUID sessionId) {
+        var summary = sessionSummaryRepository.findById(sessionId)
+                .orElseThrow(() -> new com.rhaen.tracker.common.exception.NotFoundException("Summary not found for session: " + sessionId));
+        return ApiResponse.ok(java.util.Map.of(
+                "sessionId", sessionId,
+                "polyline", summary.getPolyline(),
+                "simplifiedPolyline", summary.getSimplifiedPolyline(),
+                "distanceM", summary.getDistanceM(),
+                "durationS", summary.getDurationS(),
+                "avgSpeedMps", summary.getAvgSpeedMps(),
+                "maxSpeedMps", summary.getMaxSpeedMps(),
+                "pointsCount", summary.getPointsCount(),
+                "bbox", java.util.Map.of(
+                        "minLat", summary.getBboxMinLat(),
+                        "minLon", summary.getBboxMinLon(),
+                        "maxLat", summary.getBboxMaxLat(),
+                        "maxLon", summary.getBboxMaxLon()
+                )
+        ));
     }
 }

@@ -57,4 +57,16 @@ public class SessionSummaryEntity {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Column(name = "bbox_min_lat")
+    private Double bboxMinLat;
+
+    @Column(name = "bbox_min_lon")
+    private Double bboxMinLon;
+
+    @Column(name = "bbox_max_lat")
+    private Double bboxMaxLat;
+
+    @Column(name = "bbox_max_lon")
+    private Double bboxMaxLon;
 }

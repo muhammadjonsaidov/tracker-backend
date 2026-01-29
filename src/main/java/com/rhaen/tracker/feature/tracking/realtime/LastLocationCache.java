@@ -1,16 +1,13 @@
 package com.rhaen.tracker.feature.tracking.realtime;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +31,7 @@ public class LastLocationCache {
 
             // 🔴 realtime push (admin stream)
             broadcaster.broadcastUpdate(toAdminPayload(snap));
-        } catch (JsonProcessingException e) {
+        } catch (Exception e) {
             // cache failure should not break ingest
         }
     }
@@ -89,18 +86,18 @@ public class LastLocationCache {
     }
 
     private Map<String, Object> toAdminPayload(LastLocationSnapshot snap) {
-        return Map.of(
-                "userId", snap.userId(),
-                "sessionId", snap.sessionId(),
-                "status", snap.status(),
-                "active", snap.active(),
-                "ts", snap.ts(),
-                "lat", snap.lat(),
-                "lon", snap.lon(),
-                "accuracyM", snap.accuracyM(),
-                "speedMps", snap.speedMps(),
-                "headingDeg", snap.headingDeg()
-        );
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("userId", snap.userId());
+        payload.put("sessionId", snap.sessionId());
+        payload.put("status", snap.status());
+        payload.put("active", snap.active());
+        payload.put("ts", snap.ts());
+        payload.put("lat", snap.lat());
+        payload.put("lon", snap.lon());
+        payload.put("accuracyM", snap.accuracyM());
+        payload.put("speedMps", snap.speedMps());
+        payload.put("headingDeg", snap.headingDeg());
+        return payload;
     }
 
 }

@@ -37,6 +37,9 @@ app:
     last-location:
       ttl-minutes: 43200   # 30 kun (dashboard last stop ham turishi uchun)
       stale-seconds: 120   # ACTIVE bo‘lsa 2 min update kelmasa stale=true
+    summary:
+      simplify-epsilon-m: 10      # RDP soddalashtirish (10 metr)
+      max-polyline-points: 10000  # juda uzun session bo‘lsa, polyline uchun downsample
   security:
     jwt:
       secret: ${JWT_SECRET:change-me-please-change-me-please-change-me-please}

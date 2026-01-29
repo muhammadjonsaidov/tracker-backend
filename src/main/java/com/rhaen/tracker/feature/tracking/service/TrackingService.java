@@ -7,6 +7,7 @@ import com.rhaen.tracker.feature.tracking.api.dto.TrackingDtos;
 import com.rhaen.tracker.feature.tracking.persistence.*;
 import com.rhaen.tracker.feature.tracking.realtime.LastLocationCache;
 import com.rhaen.tracker.feature.tracking.realtime.LastLocationSnapshot;
+import com.rhaen.tracker.feature.tracking.summary.SessionSummaryService;
 import com.rhaen.tracker.feature.user.persistence.UserEntity;
 import com.rhaen.tracker.feature.user.persistence.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class TrackingService {
     private final TrackingSessionRepository sessionRepository;
     private final TrackingPointRepository pointRepository;
     private final LastLocationCache lastLocationCache;
+    private final SessionSummaryService sessionSummaryService;
 
     @Transactional
     public TrackingDtos.StartSessionResponse startSession(UUID userId) {
@@ -57,6 +59,7 @@ public class TrackingService {
 
         session.setStopTime(req.stopTime() != null ? req.stopTime() : Instant.now());
         session.setStatus(TrackingSessionEntity.Status.STOPPED);
+        sessionSummaryService.buildOrRebuild(session);
         if (req.stopLat() != null && req.stopLon() != null) {
             session.setStopPoint(GeoUtils.point(req.stopLon(), req.stopLat()));
         }

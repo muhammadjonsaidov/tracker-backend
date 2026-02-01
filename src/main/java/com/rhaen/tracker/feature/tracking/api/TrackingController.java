@@ -5,6 +5,7 @@ import com.rhaen.tracker.feature.tracking.command.TrackingCommandService;
 import com.rhaen.tracker.feature.tracking.dto.TrackingDtos;
 import com.rhaen.tracker.feature.tracking.query.TrackingQueryService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -13,6 +14,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -51,6 +54,36 @@ public class TrackingController {
         int inserted = trackingCommandService.ingestPoints(sessionId, userId, req);
         int accepted = req.points().size();
         return ApiResponse.ok(new TrackingDtos.IngestResponse(accepted, inserted));
+    }
+
+    @GetMapping("/sessions/{sessionId}/points")
+    @Operation(summary = "My session points", description = "Returns raw points with optional window + downsample.")
+    public ApiResponse<TrackingDtos.PointsResponse> sessionPoints(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "From timestamp (UTC)", example = "2026-01-29T10:00:00Z")
+            @RequestParam(required = false) Instant from,
+            @Parameter(description = "To timestamp (UTC)", example = "2026-01-29T11:00:00Z")
+            @RequestParam(required = false) Instant to,
+            @Parameter(description = "Max points to return", example = "2000")
+            @RequestParam(required = false) Integer max,
+            @Parameter(description = "Downsample points", example = "true")
+            @RequestParam(defaultValue = "true") boolean downsample,
+            @Parameter(description = "Simplify epsilon in meters", example = "8")
+            @RequestParam(defaultValue = "8") double simplifyEpsM) {
+        UUID userId = UUID.fromString(jwt.getClaimAsString("uid"));
+        List<String> roles = jwt.getClaimAsStringList("roles");
+        boolean isAdmin = roles != null && roles.contains("ADMIN");
+        return ApiResponse.ok(trackingQueryService.getSessionPoints(
+                sessionId,
+                userId,
+                isAdmin,
+                from,
+                to,
+                max,
+                downsample,
+                simplifyEpsM
+        ));
     }
 
     @GetMapping("/sessions")

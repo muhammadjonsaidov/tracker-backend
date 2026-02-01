@@ -87,6 +87,15 @@ public class TrackingDtos {
             Float headingDeg
     ) {}
 
+    public record PointsResponse(
+            @Schema(description = "Points list")
+            List<PointRow> points,
+            @Schema(description = "True if points were truncated to max")
+            boolean truncated,
+            @Schema(description = "Total points in range before truncation")
+            long total
+    ) {}
+
     public record SessionRow(
             @Schema(description = "Session id")
             UUID sessionId,

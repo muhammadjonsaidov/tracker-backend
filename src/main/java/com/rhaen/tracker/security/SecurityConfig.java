@@ -56,10 +56,16 @@ public class SecurityConfig {
 
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:3000",
-                "https://*****.ngrok-free.app" // ngrok
+                "https://2a2d1baca3e0.ngrok-free.app" // ngrok
+                //"http://localhost:5173"
         ));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Correlation-Id"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "X-Correlation-Id",
+                "ngrok-skip-browser-warning"
+        ));
         config.setExposedHeaders(List.of("X-Correlation-Id"));
         config.setAllowCredentials(false);
 

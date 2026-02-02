@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Configuration;
                 description = "Tracking backend API (mobile + admin)"
         ),
         servers = {
-                @Server(url = "https://42b07ab4efd2.ngrok-free.app", description = "Ngrok public URL"),
+                @Server(url = "https://living-likely-monster.ngrok-free.app/backend", description = "Ngrok public URL"),
                 @Server(url = "http://localhost:8080", description = "Local")
         }
 )

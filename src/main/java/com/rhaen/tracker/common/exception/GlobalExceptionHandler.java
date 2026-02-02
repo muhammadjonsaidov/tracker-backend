@@ -1,6 +1,7 @@
 package com.rhaen.tracker.common.exception;
 
 import com.rhaen.tracker.common.response.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +41,23 @@ public class GlobalExceptionHandler {
         log.error("Unhandled error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.ok("Internal error: " + ex.getClass().getSimpleName(), null));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Void>> generic(
+            Exception ex,
+            HttpServletRequest request
+    ) {
+        String accept = request.getHeader("Accept");
+
+        if (accept != null && accept.contains("text/event-stream")) {
+            log.debug("Ignoring exception for SSE request", ex);
+            return null;
+        }
+
+        log.error("Unhandled error", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.ok("Internal error", null));
     }
 
     @ExceptionHandler(TooManyRequestsException.class)

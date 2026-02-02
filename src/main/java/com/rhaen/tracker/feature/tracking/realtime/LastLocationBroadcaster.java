@@ -10,7 +10,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
@@ -40,7 +39,7 @@ public class LastLocationBroadcaster {
                 emitter.send(SseEmitter.event()
                         .name("update")
                         .data(payload));
-            } catch (IOException ex) {
+            } catch (Exception ex) {
                 emitters.remove(emitter);
             }
         }

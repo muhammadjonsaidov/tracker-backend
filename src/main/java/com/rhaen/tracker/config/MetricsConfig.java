@@ -14,11 +14,8 @@ public class MetricsConfig {
         return registry -> registry.config().commonTags("service", "tracker-backend");
     }
 
-    /**
-     * ixtiyoriy: juda shovqinli metriclarni kesish
-     */
     @Bean
     MeterFilter meterFilter() {
-        return MeterFilter.deny(id -> id.getName().startsWith("jvm.threads")); // xohlasang o‘chir
+        return MeterFilter.deny(id -> id.getName().startsWith("jvm.threads"));
     }
 }

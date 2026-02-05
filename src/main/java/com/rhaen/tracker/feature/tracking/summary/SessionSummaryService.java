@@ -21,7 +21,7 @@ public class SessionSummaryService {
     private final TrackingSummaryProperties props;
 
     @Transactional
-    public SessionSummaryEntity buildOrRebuild(TrackingSessionEntity session) {
+    public void buildOrRebuild(TrackingSessionEntity session) {
         UUID sessionId = session.getId();
 
         List<TrackingPointEntity> points = pointRepository.findBySessionIdOrderByDeviceTimestampAsc(sessionId);
@@ -40,7 +40,8 @@ public class SessionSummaryService {
             summary.setPolyline(null);
             summary.setSimplifiedPolyline(null);
             summary.setUpdatedAt(Instant.now());
-            return summaryRepository.save(summary);
+            summaryRepository.save(summary);
+            return;
         }
 
         // Convert to LatLon list
@@ -127,7 +128,7 @@ public class SessionSummaryService {
 
         summary.setUpdatedAt(Instant.now());
 
-        return summaryRepository.save(summary);
+        summaryRepository.save(summary);
     }
 
     private List<PolylineEncoder.LatLon> downsample(List<PolylineEncoder.LatLon> pts, int max) {

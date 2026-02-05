@@ -42,16 +42,13 @@ public class AdminStreamController {
     public SseEmitter streamLastLocations() {
         SseEmitter emitter = broadcaster.subscribe();
 
-        // 1) init snapshot (dashboard tez to‘lsin)
         try {
             var init = adminQueryService.listLastLocations();
             var payload = new AdminDtos.StreamInitResponse(Instant.now().toString(), init);
             emitter.send(SseEmitter.event()
                     .name("init")
                     .data(payload));
-        } catch (Exception e) {
-            // init fail bo‘lsa ham connection tursin
-        }
+        } catch (Exception ignored) {}
 
         return emitter;
     }

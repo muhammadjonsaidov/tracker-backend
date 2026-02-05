@@ -1,6 +1,7 @@
 package com.rhaen.tracker.feature.tracking.realtime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rhaen.tracker.feature.tracking.realtime.dto.LastLocationEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -85,8 +86,8 @@ public class LastLocationCache {
         return Duration.between(ts, Instant.now()).getSeconds() > props.staleSeconds();
     }
 
-    private com.rhaen.tracker.feature.tracking.realtime.dto.LastLocationEvent toAdminPayload(LastLocationSnapshot snap) {
-        return new com.rhaen.tracker.feature.tracking.realtime.dto.LastLocationEvent(
+    private LastLocationEvent toAdminPayload(LastLocationSnapshot snap) {
+        return new LastLocationEvent(
                 snap.userId(),
                 snap.sessionId(),
                 snap.status(),

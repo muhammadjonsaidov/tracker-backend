@@ -32,7 +32,6 @@ public class SseQueryTokenAuthFilter extends OncePerRequestFilter {
         boolean isSseAdminStream = uri != null && uri.startsWith("/api/v1/admin/stream/");
 
         if (isSseAdminStream && SecurityContextHolder.getContext().getAuthentication() == null) {
-            // EventSource header bera olmaydi -> query paramdan o‘qiymiz
             String token = request.getParameter("access_token");
             if (token == null || token.isBlank()) token = request.getParameter("token");
 
@@ -47,9 +46,7 @@ public class SseQueryTokenAuthFilter extends OncePerRequestFilter {
                     var auth = jwtAuthenticationConverter.convert(jwt);
                     auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(auth);
-                } catch (Exception ignore) {
-                    // noto‘g‘ri token -> security config baribir bloklaydi
-                }
+                } catch (Exception ignore) {}
             }
         }
 

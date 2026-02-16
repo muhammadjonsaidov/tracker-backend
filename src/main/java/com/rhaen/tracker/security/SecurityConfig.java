@@ -23,13 +23,15 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtAuthenticationConverter jwtAuthenticationConverter,
-            SseQueryTokenAuthFilter sseQueryTokenAuthFilter
+            SseQueryTokenAuthFilter sseQueryTokenAuthFilter,
+            BackendPathPrefixFilter backendPathPrefixFilter
     ) throws Exception {
 
         return http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(backendPathPrefixFilter, BearerTokenAuthenticationFilter.class)
                 .addFilterBefore(sseQueryTokenAuthFilter, BearerTokenAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()

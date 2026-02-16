@@ -15,7 +15,7 @@ spring:
     name: tracker-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5454/tracker_db
+    url: jdbc:postgresql://localhost:5432/tracker_db
     username: tracker
     password: tracker
 
@@ -35,7 +35,7 @@ spring:
   data:
     redis:
       host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      port: ${REDIS_PORT:6363}
       timeout: 3s
 
 management:

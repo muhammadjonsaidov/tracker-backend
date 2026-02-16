@@ -23,25 +23,20 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtAuthenticationConverter jwtAuthenticationConverter,
-            SseQueryTokenAuthFilter sseQueryTokenAuthFilter,
-            BackendPathPrefixFilter backendPathPrefixFilter
+            SseQueryTokenAuthFilter sseQueryTokenAuthFilter
     ) throws Exception {
 
         return http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(backendPathPrefixFilter, BearerTokenAuthenticationFilter.class)
                 .addFilterBefore(sseQueryTokenAuthFilter, BearerTokenAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/backend/swagger-ui/**",
-                                "/backend/swagger-ui.html",
-                                "/backend/v3/api-docs/**"
+                                "/v3/api-docs/**"
                         ).permitAll()
                         .requestMatchers("/actuator/metrics/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/auth/**", "/health").permitAll()

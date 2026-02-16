@@ -1,14 +1,17 @@
 server:
   port: 8085
   address: 0.0.0.0
+  forward-headers-strategy: framework
 
 springdoc:
+  cache:
+    disabled: true
   api-docs:
     path: /v3/api-docs
 
   swagger-ui:
-    url: /backend/v3/api-docs
-    config-url: /backend/v3/api-docs/swagger-config
+    url: /v3/api-docs
+    config-url: /v3/api-docs/swagger-config
 
 spring:
   application:

@@ -33,7 +33,14 @@ public class SecurityConfig {
                 .addFilterBefore(sseQueryTokenAuthFilter, BearerTokenAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/backend/swagger-ui/**",
+                                "/backend/swagger-ui.html",
+                                "/backend/v3/api-docs/**"
+                        ).permitAll()
                         .requestMatchers("/actuator/metrics/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/auth/**", "/health").permitAll()
 

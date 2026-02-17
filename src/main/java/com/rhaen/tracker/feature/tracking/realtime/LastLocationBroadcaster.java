@@ -20,7 +20,7 @@ public class LastLocationBroadcaster {
     private final CopyOnWriteArrayList<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
     public SseEmitter subscribe() {
-        // 0L => timeout yo‘q (server/proxyga bog‘liq). Xohlasang 30 min: 30 * 60 * 1000L
+        // 0L => timeout yo‘q (server/proxyga bog‘liq).
         SseEmitter emitter = new SseEmitter(0L);
 
         emitters.add(emitter);

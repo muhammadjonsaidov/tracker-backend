@@ -88,7 +88,7 @@ public class TrackingController {
 
     @GetMapping("/sessions")
     @Operation(summary = "My sessions", description = "List sessions for the authenticated user.")
-    public ApiResponse<java.util.List<TrackingDtos.SessionRow>> mySessions(@AuthenticationPrincipal Jwt jwt) {
+    public ApiResponse<List<TrackingDtos.SessionRow>> mySessions(@AuthenticationPrincipal Jwt jwt) {
         UUID userId = UUID.fromString(jwt.getClaimAsString("uid"));
         return ApiResponse.ok(trackingQueryService.listSessions(userId));
     }

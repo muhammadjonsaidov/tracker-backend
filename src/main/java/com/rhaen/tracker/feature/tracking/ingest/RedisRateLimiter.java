@@ -53,7 +53,6 @@ public class RedisRateLimiter {
 
         if (res == null || res.size() < 2) {
             // Redis down bo‘lsa MVP’da “allow” qilish mumkin (fail-open).
-            // Xohlasang fail-closed ham qilamiz.
             return new RateLimitResult(true, -1);
         }
 

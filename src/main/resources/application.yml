@@ -85,7 +85,7 @@ app:
       sweep-interval-seconds: 86400 # 1 sutkada 1 marta
       batch-sessions: 200           # session update batch
       batch-points: 20000           # points delete batch
-      run-at-startup: false         # test uchun true qilsa bo‘ladi
+      run-at-startup: true         # test uchun true
 
   security:
     jwt:

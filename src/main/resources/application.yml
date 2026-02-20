@@ -84,7 +84,7 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
   tracking:
     last-location:
-      ttl-minutes: 43200   # 30 kun (dashboard last stop ham turishi uchun)
+      ttl-minutes: 60   # 1 soat (dashboard last stop ham turishi uchun)
       stale-seconds: 120   # ACTIVE bo‘lsa 2 min update kelmasa stale=true
     summary:
       simplify-epsilon-m: 10      # RDP soddalashtirish (10 metr)
@@ -102,9 +102,9 @@ app:
       points-per-minute: 6000       # 1 user/minute (50 point * 120 request/min kabi emas, real limit)
       window-seconds: 60            # fixed-window rate limit
     retention:
-      archive-after-days: 90        # STOPPED/EXPIRED -> ARCHIVED
-      prune-points-after-days: 30   # raw tracking_points delete (summary qoladi)
-      sweep-interval-seconds: 86400 # 1 sutkada 1 marta
+      archive-after-days: 1        # STOPPED/EXPIRED -> ARCHIVED
+      prune-points-after-days: 1   # raw tracking_points delete (summary qoladi)
+      sweep-interval-seconds: 3600 # 5 daqiqada 1 marta
       batch-sessions: 200           # session update batch
       batch-points: 20000           # points delete batch
       run-at-startup: true         # test uchun true

@@ -52,8 +52,7 @@ class AuthCommandServiceTest {
                 "0123456789abcdef0123456789abcdef",
                 "tracker-backend",
                 60,
-                5
-        );
+                5);
         service = new AuthCommandService(userRepository, passwordEncoder, jwtEncoder, props, auditService);
     }
 
@@ -123,8 +122,7 @@ class AuthCommandServiceTest {
                 Instant.now(),
                 Instant.now().plusSeconds(3600),
                 java.util.Map.of("alg", "HS256", "typ", "JWT"),
-                java.util.Map.of("uid", id.toString(), "roles", List.of("USER"))
-        );
+                java.util.Map.of("uid", id.toString(), "roles", List.of("USER")));
         when(jwtEncoder.encode(any(JwtEncoderParameters.class))).thenReturn(jwt);
 
         var resp = service.login(req);
@@ -175,7 +173,8 @@ class AuthCommandServiceTest {
         when(jwtEncoder.encode(any(JwtEncoderParameters.class))).thenAnswer(inv -> {
             JwtEncoderParameters p = inv.getArgument(0);
             JwtClaimsSet claims = p.getClaims();
-            assertThat(claims.getSubject()).isEqualTo("user1");
+            assertThat(claims.getSubject()).isEqualTo(id.toString());
+            assertThat((Object) claims.getClaim("username")).isEqualTo("user1");
             assertThat((Object) claims.getClaim("uid")).isEqualTo(id.toString());
             List<String> roles = claims.getClaim("roles");
             assertThat(roles).contains("ADMIN");
@@ -186,8 +185,7 @@ class AuthCommandServiceTest {
                     Instant.now(),
                     Instant.now().plusSeconds(300),
                     java.util.Map.of("alg", "HS256"),
-                    java.util.Map.of("sub", "user1")
-            );
+                    java.util.Map.of("sub", id.toString(), "username", "user1"));
         });
 
         service.login(new AuthDtos.LoginRequest("user1", "secret"));

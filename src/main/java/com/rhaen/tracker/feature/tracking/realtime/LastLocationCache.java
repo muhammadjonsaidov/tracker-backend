@@ -14,8 +14,8 @@ import java.util.*;
 @RequiredArgsConstructor
 public class LastLocationCache {
 
-    private static final String KEY_PREFIX = "lastloc:";      // lastloc:{userId}
-    private static final String USERS_SET  = "lastloc:users"; // set of userIds
+    private static final String KEY_PREFIX = "lastloc:"; // lastloc:{userId}
+    private static final String USERS_SET = "lastloc:users"; // set of userIds
 
     private final StringRedisTemplate redis;
     private final ObjectMapper objectMapper;
@@ -37,9 +37,22 @@ public class LastLocationCache {
         }
     }
 
+    public void remove(UUID userId) {
+        try {
+            String key = KEY_PREFIX + userId;
+            redis.delete(key);
+            redis.opsForSet().remove(USERS_SET, userId.toString());
+            // Optionally broadcast a "removal" event if the frontend supports it,
+            // but for now, the next full list fetch or stale check will clear it.
+        } catch (Exception e) {
+            // ignore
+        }
+    }
+
     public Optional<LastLocationSnapshot> get(UUID userId) {
         String json = redis.opsForValue().get(KEY_PREFIX + userId);
-        if (json == null) return Optional.empty();
+        if (json == null)
+            return Optional.empty();
         try {
             return Optional.of(objectMapper.readValue(json, LastLocationSnapshot.class));
         } catch (Exception e) {
@@ -50,11 +63,13 @@ public class LastLocationCache {
     /** For admin dashboard: list all users known to Redis */
     public List<LastLocationSnapshot> getAll() {
         Set<String> ids = redis.opsForSet().members(USERS_SET);
-        if (ids == null || ids.isEmpty()) return List.of();
+        if (ids == null || ids.isEmpty())
+            return List.of();
 
         List<String> keys = ids.stream().map(id -> KEY_PREFIX + id).toList();
         List<String> jsons = redis.opsForValue().multiGet(keys);
-        if (jsons == null) return List.of();
+        if (jsons == null)
+            return List.of();
 
         List<LastLocationSnapshot> result = new ArrayList<>(jsons.size());
         List<String> missingIds = new ArrayList<>();
@@ -68,7 +83,8 @@ public class LastLocationCache {
             }
             try {
                 result.add(objectMapper.readValue(json, LastLocationSnapshot.class));
-            } catch (Exception ignore) { }
+            } catch (Exception ignore) {
+            }
         }
 
         if (!missingIds.isEmpty()) {
@@ -80,9 +96,11 @@ public class LastLocationCache {
 
     /** Computed flag: ACTIVE but last update is old */
     public boolean isStale(LastLocationSnapshot snap) {
-        if (!snap.active()) return false;
+        if (!snap.active())
+            return false;
         Instant ts = snap.ts();
-        if (ts == null) return true;
+        if (ts == null)
+            return true;
         return Duration.between(ts, Instant.now()).getSeconds() > props.staleSeconds();
     }
 
@@ -98,8 +116,7 @@ public class LastLocationCache {
                 snap.lon(),
                 snap.accuracyM(),
                 snap.speedMps(),
-                snap.headingDeg()
-        );
+                snap.headingDeg());
     }
 
 }

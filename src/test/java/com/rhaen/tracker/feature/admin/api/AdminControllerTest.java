@@ -1,5 +1,6 @@
 package com.rhaen.tracker.feature.admin.api;
 
+import com.rhaen.tracker.feature.admin.command.AdminCommandService;
 import com.rhaen.tracker.feature.admin.query.AdminQueryService;
 import com.rhaen.tracker.feature.tracking.persistence.TrackingSessionEntity;
 import org.junit.jupiter.api.Test;
@@ -18,23 +19,27 @@ import static org.mockito.Mockito.when;
 class AdminControllerTest {
 
     @Mock
-    private AdminQueryService service;
+    private AdminQueryService queryService;
+
+    @Mock
+    private AdminCommandService commandService;
 
     @Test
     void delegates_allEndpoints() {
-        AdminController controller = new AdminController(service);
-        when(service.listUsers()).thenReturn(List.of());
-        when(service.listLastLocations()).thenReturn(List.of());
-        when(service.getSessionPoints(any(), any(), any(), any())).thenReturn(List.of());
-        when(service.getSessionSummary(any())).thenReturn(null);
-        when(service.listSessions(any(), any(), any(), any(), anyInt(), anyInt())).thenReturn(null);
-        when(service.listAuditLogs(anyInt(), anyInt())).thenReturn(new PageImpl<>(List.of()));
+        AdminController controller = new AdminController(queryService, commandService);
+        when(queryService.listUsers()).thenReturn(List.of());
+        when(queryService.listLastLocations()).thenReturn(List.of());
+        when(queryService.getSessionPoints(any(), any(), any(), any())).thenReturn(List.of());
+        when(queryService.getSessionSummary(any())).thenReturn(null);
+        when(queryService.listSessions(any(), any(), any(), any(), anyInt(), anyInt())).thenReturn(null);
+        when(queryService.listAuditLogs(anyInt(), anyInt())).thenReturn(new PageImpl<>(List.of()));
 
         assertThat(controller.users().message()).isEqualTo("OK");
         assertThat(controller.lastLocations().message()).isEqualTo("OK");
         assertThat(controller.sessionPoints(java.util.UUID.randomUUID(), null, null, null).message()).isEqualTo("OK");
         assertThat(controller.sessionSummary(java.util.UUID.randomUUID()).message()).isEqualTo("OK");
-        assertThat(controller.sessions(null, TrackingSessionEntity.Status.ACTIVE, null, null, 0, 20).message()).isEqualTo("OK");
+        assertThat(controller.sessions(null, TrackingSessionEntity.Status.ACTIVE, null, null, 0, 20).message())
+                .isEqualTo("OK");
         assertThat(controller.auditLogs(0, 20).message()).isEqualTo("OK");
     }
 }

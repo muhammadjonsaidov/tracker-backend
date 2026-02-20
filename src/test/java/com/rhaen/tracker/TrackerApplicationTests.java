@@ -1,11 +1,10 @@
 package com.rhaen.tracker;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class TrackerApplicationTests {
+class TrackerApplicationTests extends BaseIntegrationTest {
 
     @Test
-    void contextLoads() {}
+    void contextLoads() {
+    }
 }

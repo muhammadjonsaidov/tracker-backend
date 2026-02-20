@@ -41,6 +41,7 @@ class SseQueryTokenAuthFilterTest {
     void skips_nonSseAdminUri() throws ServletException, IOException {
         SseQueryTokenAuthFilter filter = new SseQueryTokenAuthFilter(jwtDecoder, converter);
         MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/v1/tracking/sessions");
+        req.setServletPath("/api/v1/tracking/sessions");
 
         filter.doFilter(req, new MockHttpServletResponse(), new MockFilterChain());
 
@@ -52,6 +53,7 @@ class SseQueryTokenAuthFilterTest {
     void setsAuth_whenStreamTokenIsValid() throws ServletException, IOException {
         SseQueryTokenAuthFilter filter = new SseQueryTokenAuthFilter(jwtDecoder, converter);
         MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/v1/admin/stream/last-locations");
+        req.setServletPath("/api/v1/admin/stream/last-locations");
         req.setParameter("access_token", "abc");
 
         Jwt jwt = new Jwt("abc", Instant.now(), Instant.now().plusSeconds(60), Map.of("alg", "HS256"), Map.of("typ", "stream", "sub", "admin"));
@@ -70,6 +72,7 @@ class SseQueryTokenAuthFilterTest {
     void doesNotSetAuth_whenTypIsNotStream() throws ServletException, IOException {
         SseQueryTokenAuthFilter filter = new SseQueryTokenAuthFilter(jwtDecoder, converter);
         MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/v1/admin/stream/last-locations");
+        req.setServletPath("/api/v1/admin/stream/last-locations");
         req.setParameter("token", "abc");
 
         Jwt jwt = new Jwt("abc", Instant.now(), Instant.now().plusSeconds(60), Map.of("alg", "HS256"), Map.of("typ", "access", "sub", "admin"));

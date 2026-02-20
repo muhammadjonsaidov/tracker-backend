@@ -37,8 +37,8 @@ public class SessionSummaryService {
             summary.setDurationS(0);
             summary.setAvgSpeedMps(0d);
             summary.setMaxSpeedMps(0d);
-            summary.setPolyline(null);
-            summary.setSimplifiedPolyline(null);
+            summary.setPolyline("");
+            summary.setSimplifiedPolyline("");
             summary.setUpdatedAt(Instant.now());
             summaryRepository.save(summary);
             return;

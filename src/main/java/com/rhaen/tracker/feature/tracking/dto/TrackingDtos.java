@@ -1,10 +1,14 @@
 package com.rhaen.tracker.feature.tracking.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.PositiveOrZero;
 
 import java.time.Instant;
 import java.util.List;
@@ -31,27 +35,33 @@ public class TrackingDtos {
     ) {}
 
     public record LocationPoint(
-            @Schema(description = "Client event id for de-duplication (optional)")
+            @Schema(description = "Client event id for de-duplication")
+            @NotNull(message = "eventId is required")
             UUID eventId,
 
-            @NotNull
+            @NotNull(message = "latitude is required")
             @DecimalMin(value = "-90.0") @DecimalMax(value = "90.0")
             @Schema(description = "Latitude", example = "41.3111")
             Double lat,
 
-            @NotNull
+            @NotNull(message = "longitude is required")
             @DecimalMin(value = "-180.0") @DecimalMax(value = "180.0")
             @Schema(description = "Longitude", example = "69.2797")
             Double lon,
 
-            @NotNull
+            @NotNull(message = "deviceTimestamp is required")
+            @PastOrPresent(message = "deviceTimestamp cannot be in future")
             @Schema(description = "Device timestamp (UTC)")
             Instant deviceTimestamp,
 
+            @PositiveOrZero(message = "accuracyM must be >= 0")
             @Schema(description = "Accuracy meters (optional)")
             Float accuracyM,
+            @PositiveOrZero(message = "speedMps must be >= 0")
             @Schema(description = "Speed m/s (optional)")
             Float speedMps,
+            @Min(value = 0, message = "headingDeg must be >= 0")
+            @Max(value = 360, message = "headingDeg must be <= 360")
             @Schema(description = "Heading degrees (optional)")
             Float headingDeg,
             @Schema(description = "Provider (gps/network/fused)")

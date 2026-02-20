@@ -4,10 +4,11 @@ import com.rhaen.tracker.feature.tracking.dto.TrackingDtos;
 import com.rhaen.tracker.feature.tracking.history.SessionHistoryService;
 import com.rhaen.tracker.feature.tracking.persistence.TrackingSessionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -17,16 +18,19 @@ public class TrackingQueryService {
     private final TrackingSessionRepository sessionRepository;
     private final SessionHistoryService sessionHistoryService;
 
-    public List<TrackingDtos.SessionRow> listSessions(UUID userId) {
-        return sessionRepository.findByUser_IdOrderByStartTimeDesc(userId).stream()
+    public Page<TrackingDtos.SessionRow> listSessions(UUID userId, int page, int size) {
+        int pageNumber = Math.max(0, page);
+        int pageSize = Math.min(100, Math.max(1, size));
+        var pageable = PageRequest.of(pageNumber, pageSize);
+
+        return sessionRepository.findByUser_IdOrderByStartTimeDesc(userId, pageable)
                 .map(s -> new TrackingDtos.SessionRow(
                         s.getId(),
                         s.getStartTime(),
                         s.getStopTime(),
                         s.getStatus().name(),
                         s.getLastPointAt()
-                ))
-                .toList();
+                ));
     }
 
     public TrackingDtos.PointsResponse getSessionPoints(UUID sessionId,

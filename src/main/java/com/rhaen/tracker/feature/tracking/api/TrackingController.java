@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -88,8 +89,12 @@ public class TrackingController {
 
     @GetMapping("/sessions")
     @Operation(summary = "My sessions", description = "List sessions for the authenticated user.")
-    public ApiResponse<List<TrackingDtos.SessionRow>> mySessions(@AuthenticationPrincipal Jwt jwt) {
+    public ApiResponse<Page<TrackingDtos.SessionRow>> mySessions(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
         UUID userId = UUID.fromString(jwt.getClaimAsString("uid"));
-        return ApiResponse.ok(trackingQueryService.listSessions(userId));
+        return ApiResponse.ok(trackingQueryService.listSessions(userId, page, size));
     }
 }

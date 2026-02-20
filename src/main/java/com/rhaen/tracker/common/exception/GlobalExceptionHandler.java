@@ -36,13 +36,6 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.ok(msg, null));
     }
 
-    /* * @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> generic(Exception ex) {
-        log.error("Unhandled error", ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.ok("Internal error: " + ex.getClass().getSimpleName(), null));
-    }*/
-
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> generic(
             Exception ex,
@@ -51,8 +44,9 @@ public class GlobalExceptionHandler {
         String accept = request.getHeader("Accept");
 
         if (accept != null && accept.contains("text/event-stream")) {
-            log.debug("Ignoring exception for SSE request", ex);
-            return null;
+            log.error("Exception in SSE stream", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.ok("Stream error", null));
         }
 
         log.error("Unhandled error", ex);

@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableConfigurationProperties({
+        CorsProperties.class,
         LastLocationProperties.class,
         TrackingSummaryProperties.class,
         TrackingHistoryProperties.class,

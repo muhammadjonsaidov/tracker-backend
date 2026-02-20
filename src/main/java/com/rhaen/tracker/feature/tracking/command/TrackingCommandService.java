@@ -1,5 +1,6 @@
 package com.rhaen.tracker.feature.tracking.command;
 
+import com.rhaen.tracker.common.audit.AuditService;
 import com.rhaen.tracker.common.exception.BadRequestException;
 import com.rhaen.tracker.common.exception.NotFoundException;
 import com.rhaen.tracker.common.exception.TooManyRequestsException;
@@ -26,10 +27,10 @@ import io.micrometer.core.instrument.Timer;
 
 import java.time.Instant;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +46,7 @@ public class TrackingCommandService {
     private final TrackingIngestProperties ingestProps;
     private final RedisRateLimiter rateLimiter;
     private final TrackingPointIngestRepository ingestRepository;
+    private final AuditService auditService;
 
     private final MeterRegistry meterRegistry;
 
@@ -76,6 +78,13 @@ public class TrackingCommandService {
         session = sessionRepository.save(session);
 
         sessionStartCounter.increment();
+        auditService.logUserAction(
+                userId,
+                "SESSION_START",
+                "SESSION",
+                session.getId(),
+                Map.of("status", session.getStatus().name())
+        );
 
         return new TrackingDtos.StartSessionResponse(
                 session.getId(),
@@ -127,6 +136,13 @@ public class TrackingCommandService {
         }
 
         sessionStopCounter.increment();
+        auditService.logUserAction(
+                userId,
+                "SESSION_STOP",
+                "SESSION",
+                session.getId(),
+                Map.of("status", session.getStatus().name())
+        );
     }
 
     /**
@@ -157,26 +173,33 @@ public class TrackingCommandService {
             // Rate limit: points/minute (fixed window)
             var rl = rateLimiter.consumePoints(userId, rawCount);
             if (!rl.allowed()) {
+                auditService.logUserAction(
+                        userId,
+                        "RATE_LIMIT_VIOLATION",
+                        "SESSION",
+                        sessionId,
+                        Map.of("current", rl.current(), "attemptedPoints", rawCount)
+                );
                 throw new TooManyRequestsException("Rate limit exceeded (points/min). Current=" + rl.current());
             }
 
             // Dedupe inside the same batch by eventId (keep first occurrence)
-            Map<UUID, TrackingPointIngestRepository.IngestPointRow> unique = new LinkedHashMap<>();
-            for (TrackingDtos.LocationPoint p : req.points()) {
-                UUID eid = (p.eventId() != null) ? p.eventId() : UUID.randomUUID();
-
-                unique.putIfAbsent(eid, new TrackingPointIngestRepository.IngestPointRow(
-                        eid,
-                        p.lat(),
-                        p.lon(),
-                        p.deviceTimestamp(),
-                        p.accuracyM(),
-                        p.speedMps(),
-                        p.headingDeg(),
-                        p.provider(),
-                        Boolean.TRUE.equals(p.mock())
-                ));
-            }
+            Map<UUID, TrackingPointIngestRepository.IngestPointRow> unique = req.points().stream()
+                    .collect(Collectors.toMap(
+                            TrackingDtos.LocationPoint::eventId,
+                            p -> new TrackingPointIngestRepository.IngestPointRow(
+                                    p.eventId(),
+                                    p.lat(),
+                                    p.lon(),
+                                    p.deviceTimestamp(),
+                                    p.accuracyM(),
+                                    p.speedMps(),
+                                    p.headingDeg(),
+                                    p.provider(),
+                                    Boolean.TRUE.equals(p.mock())
+                            ),
+                            (first, second) -> first
+                    ));
 
             List<TrackingPointIngestRepository.IngestPointRow> rows = unique.values().stream().toList();
             if (rows.isEmpty()) return 0;

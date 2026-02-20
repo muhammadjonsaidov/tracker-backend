@@ -1,5 +1,6 @@
 package com.rhaen.tracker.feature.auth.command;
 
+import com.rhaen.tracker.common.audit.AuditService;
 import com.rhaen.tracker.common.exception.BadRequestException;
 import com.rhaen.tracker.feature.auth.dto.AuthDtos;
 import com.rhaen.tracker.feature.user.persistence.UserEntity;
@@ -26,6 +27,7 @@ public class AuthCommandService {
 
     private final JwtEncoder jwtEncoder;
     private final JwtProperties jwtProperties;
+    private final AuditService auditService;
 
     @Transactional
     public void register(AuthDtos.RegisterRequest req) {
@@ -43,7 +45,14 @@ public class AuthCommandService {
                 .role(UserEntity.Role.USER)
                 .build();
 
-        userRepository.save(user);
+        user = userRepository.save(user);
+        auditService.logUserAction(
+                user.getId(),
+                "REGISTER_SUCCESS",
+                "USER",
+                user.getId(),
+                java.util.Map.of("username", user.getUsername())
+        );
     }
 
     public AuthDtos.AuthResponse login(AuthDtos.LoginRequest req) {
@@ -52,10 +61,24 @@ public class AuthCommandService {
                 .orElseThrow(() -> new BadRequestException("Invalid credentials"));
 
         if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
+            auditService.logUserAction(
+                    user.getId(),
+                    "LOGIN_FAILED",
+                    "USER",
+                    user.getId(),
+                    java.util.Map.of("reason", "invalid_password")
+            );
             throw new BadRequestException("Invalid credentials");
         }
 
         String token = generateAccessToken(user);
+        auditService.logUserAction(
+                user.getId(),
+                "LOGIN_SUCCESS",
+                "USER",
+                user.getId(),
+                java.util.Map.of("method", "username_or_email")
+        );
         return new AuthDtos.AuthResponse(token, "Bearer");
     }
 

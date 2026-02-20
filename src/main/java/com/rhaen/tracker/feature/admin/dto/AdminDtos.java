@@ -122,4 +122,27 @@ public class AdminDtos {
             @Schema(description = "Initial items")
             List<LastLocationRow> items
     ) {}
+
+    public record AuditLogRow(
+            @Schema(description = "Audit log id")
+            Long id,
+            @Schema(description = "Actor user id")
+            UUID adminId,
+            @Schema(description = "Actor username")
+            String adminUsername,
+            @Schema(description = "Action")
+            String action,
+            @Schema(description = "Target type")
+            String targetType,
+            @Schema(description = "Target id")
+            UUID targetId,
+            @Schema(description = "Metadata JSON")
+            String metadata,
+            @Schema(description = "Source IP")
+            String ipAddress,
+            @Schema(description = "User agent")
+            String userAgent,
+            @Schema(description = "Created at (UTC)")
+            Instant createdAt
+    ) {}
 }

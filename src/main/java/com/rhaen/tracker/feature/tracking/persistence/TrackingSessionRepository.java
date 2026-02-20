@@ -14,6 +14,7 @@ import java.util.UUID;
 public interface TrackingSessionRepository extends JpaRepository<TrackingSessionEntity, UUID> {
 
     List<TrackingSessionEntity> findByUser_IdOrderByStartTimeDesc(UUID userId);
+    Page<TrackingSessionEntity> findByUser_IdOrderByStartTimeDesc(UUID userId, Pageable pageable);
 
     @Query("select s from TrackingSessionEntity s where s.user.id = :userId and s.status = 'ACTIVE' order by s.startTime desc")
     Optional<TrackingSessionEntity> findActiveByUserId(UUID userId);

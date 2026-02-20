@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -76,5 +77,15 @@ public class AdminController {
             @Parameter(description = "Page size")
             @RequestParam(defaultValue = "20") int size) {
         return ApiResponse.ok(adminQueryService.listSessions(userId, status, from, to, page, size));
+    }
+
+    @GetMapping("/audit-logs")
+    @Operation(summary = "Audit logs", description = "Returns audit log events with pagination.")
+    public ApiResponse<Page<AdminDtos.AuditLogRow>> auditLogs(
+            @Parameter(description = "Page index")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size")
+            @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.ok(adminQueryService.listAuditLogs(page, size));
     }
 }

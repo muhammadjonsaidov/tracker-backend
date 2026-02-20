@@ -2,6 +2,7 @@ package com.rhaen.tracker.feature.admin.query;
 
 import com.rhaen.tracker.common.exception.NotFoundException;
 import com.rhaen.tracker.feature.admin.dto.AdminDtos;
+import com.rhaen.tracker.feature.admin.persistence.AdminAuditLogRepository;
 import com.rhaen.tracker.feature.tracking.dto.TrackingDtos;
 import com.rhaen.tracker.feature.tracking.history.SessionHistoryService;
 import com.rhaen.tracker.feature.tracking.persistence.SessionSummaryRepository;
@@ -9,6 +10,7 @@ import com.rhaen.tracker.feature.tracking.persistence.TrackingSessionEntity;
 import com.rhaen.tracker.feature.tracking.persistence.TrackingSessionRepository;
 import com.rhaen.tracker.feature.tracking.realtime.LastLocationCache;
 import com.rhaen.tracker.feature.user.persistence.UserRepository;
+import org.springframework.data.domain.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -27,6 +29,7 @@ public class AdminQueryService {
     private final SessionSummaryRepository sessionSummaryRepository;
     private final SessionHistoryService sessionHistoryService;
     private final LastLocationCache lastLocationCache;
+    private final AdminAuditLogRepository auditLogRepository;
 
     public List<AdminDtos.UserRow> listUsers() {
         return userRepository.findAll().stream()
@@ -127,5 +130,24 @@ public class AdminQueryService {
                                                        Instant to,
                                                        Integer max) {
         return sessionHistoryService.getSessionPoints(sessionId, from, to, max);
+    }
+
+    public Page<AdminDtos.AuditLogRow> listAuditLogs(int page, int size) {
+        int pageNumber = Math.max(0, page);
+        int pageSize = Math.min(100, Math.max(1, size));
+        var pageable = PageRequest.of(pageNumber, pageSize);
+        return auditLogRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .map(log -> new AdminDtos.AuditLogRow(
+                        log.getId(),
+                        log.getAdmin() != null ? log.getAdmin().getId() : null,
+                        log.getAdmin() != null ? log.getAdmin().getUsername() : null,
+                        log.getAction(),
+                        log.getTargetType(),
+                        log.getTargetId(),
+                        log.getMetadata(),
+                        log.getIpAddress() != null ? log.getIpAddress().getHostAddress() : null,
+                        log.getUserAgent(),
+                        log.getCreatedAt()
+                ));
     }
 }

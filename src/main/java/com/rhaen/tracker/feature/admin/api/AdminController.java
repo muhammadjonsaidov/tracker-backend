@@ -29,9 +29,11 @@ public class AdminController {
     private final AdminCommandService adminCommandService;
 
     @GetMapping("/users")
-    @Operation(summary = "Users list", description = "List users without sensitive fields.")
-    public ApiResponse<List<AdminDtos.UserRow>> users() {
-        return ApiResponse.ok(adminQueryService.listUsers());
+    @Operation(summary = "Users list", description = "List users with pagination.")
+    public ApiResponse<AdminDtos.UserPage> users(
+            @Parameter(description = "Page index") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.ok(adminQueryService.listUsers(page, size));
     }
 
     @PutMapping("/users/{userId}/role")

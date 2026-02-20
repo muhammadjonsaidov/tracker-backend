@@ -24,130 +24,137 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AdminQueryService {
 
-    private final UserRepository userRepository;
-    private final TrackingSessionRepository sessionRepository;
-    private final SessionSummaryRepository sessionSummaryRepository;
-    private final SessionHistoryService sessionHistoryService;
-    private final LastLocationCache lastLocationCache;
-    private final AdminAuditLogRepository auditLogRepository;
+        private final UserRepository userRepository;
+        private final TrackingSessionRepository sessionRepository;
+        private final SessionSummaryRepository sessionSummaryRepository;
+        private final SessionHistoryService sessionHistoryService;
+        private final LastLocationCache lastLocationCache;
+        private final AdminAuditLogRepository auditLogRepository;
 
-    public List<AdminDtos.UserRow> listUsers() {
-        return userRepository.findAll().stream()
-                .map(u -> new AdminDtos.UserRow(
-                        u.getId(),
-                        u.getUsername(),
-                        u.getEmail(),
-                        u.getRole().name(),
-                        u.getCreatedAt()
-                ))
-                .toList();
-    }
+        public AdminDtos.UserPage listUsers(int page, int size) {
+                var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+                var p = userRepository.findAll(pageable);
 
-    public List<AdminDtos.LastLocationRow> listLastLocations() {
-        return lastLocationCache.getAll().stream()
-                .map(snap -> new AdminDtos.LastLocationRow(
-                        snap.userId(),
-                        snap.sessionId(),
-                        snap.status(),
-                        snap.active(),
-                        lastLocationCache.isStale(snap),
-                        snap.ts(),
-                        snap.lat(),
-                        snap.lon(),
-                        snap.accuracyM(),
-                        snap.speedMps(),
-                        snap.headingDeg()
-                ))
-                .sorted((a, b) -> {
-                    if (a.active() != b.active()) {
-                        return a.active() ? -1 : 1;
-                    }
-                    Instant ta = a.ts();
-                    Instant tb = b.ts();
-                    if (ta == null && tb == null) return 0;
-                    if (ta == null) return 1;
-                    if (tb == null) return -1;
-                    return tb.compareTo(ta);
-                })
-                .toList();
-    }
+                var items = p.getContent().stream()
+                                .map(u -> new AdminDtos.UserRow(
+                                                u.getId(),
+                                                u.getUsername(),
+                                                u.getEmail(),
+                                                u.getRole().name(),
+                                                u.getCreatedAt()))
+                                .toList();
 
-    public AdminDtos.SessionPage listSessions(UUID userId,
-                                              TrackingSessionEntity.Status status,
-                                              Instant from,
-                                              Instant to,
-                                              int page,
-                                              int size) {
-        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "startTime"));
-        var p = sessionRepository.search(userId, status, from, to, pageable);
+                return new AdminDtos.UserPage(
+                                items,
+                                p.getNumber(),
+                                p.getSize(),
+                                p.getTotalElements(),
+                                p.getTotalPages());
+        }
 
-        var items = p.getContent().stream()
-                .map(s -> new AdminDtos.SessionRow(
-                        s.getId(),
-                        s.getUser().getId(),
-                        s.getUser().getUsername(),
-                        s.getStartTime(),
-                        s.getStopTime(),
-                        s.getStatus().name(),
-                        s.getLastPointAt()
-                ))
-                .toList();
+        public List<AdminDtos.LastLocationRow> listLastLocations() {
+                return lastLocationCache.getAll().stream()
+                                .map(snap -> new AdminDtos.LastLocationRow(
+                                                snap.userId(),
+                                                snap.sessionId(),
+                                                snap.status(),
+                                                snap.active(),
+                                                lastLocationCache.isStale(snap),
+                                                snap.ts(),
+                                                snap.lat(),
+                                                snap.lon(),
+                                                snap.accuracyM(),
+                                                snap.speedMps(),
+                                                snap.headingDeg()))
+                                .sorted((a, b) -> {
+                                        if (a.active() != b.active()) {
+                                                return a.active() ? -1 : 1;
+                                        }
+                                        Instant ta = a.ts();
+                                        Instant tb = b.ts();
+                                        if (ta == null && tb == null)
+                                                return 0;
+                                        if (ta == null)
+                                                return 1;
+                                        if (tb == null)
+                                                return -1;
+                                        return tb.compareTo(ta);
+                                })
+                                .toList();
+        }
 
-        return new AdminDtos.SessionPage(
-                items,
-                p.getNumber(),
-                p.getSize(),
-                p.getTotalElements(),
-                p.getTotalPages()
-        );
-    }
+        public AdminDtos.SessionPage listSessions(UUID userId,
+                        TrackingSessionEntity.Status status,
+                        Instant from,
+                        Instant to,
+                        int page,
+                        int size) {
+                var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "startTime"));
+                var p = sessionRepository.search(userId, status, from, to, pageable);
 
-    public AdminDtos.SessionSummaryResponse getSessionSummary(UUID sessionId) {
-        var summary = sessionSummaryRepository.findById(sessionId)
-                .orElseThrow(() -> new NotFoundException("Summary not found for session: " + sessionId));
-        var bbox = new AdminDtos.Bbox(
-                summary.getBboxMinLat(),
-                summary.getBboxMinLon(),
-                summary.getBboxMaxLat(),
-                summary.getBboxMaxLon()
-        );
-        return new AdminDtos.SessionSummaryResponse(
-                sessionId,
-                summary.getPolyline(),
-                summary.getSimplifiedPolyline(),
-                summary.getDistanceM(),
-                summary.getDurationS(),
-                summary.getAvgSpeedMps(),
-                summary.getMaxSpeedMps(),
-                summary.getPointsCount(),
-                bbox,
-                summary.getRawPointsPrunedAt()
-        );
-    }
+                var items = p.getContent().stream()
+                                .map(s -> new AdminDtos.SessionRow(
+                                                s.getId(),
+                                                s.getUser().getId(),
+                                                s.getUser().getUsername(),
+                                                s.getStartTime(),
+                                                s.getStopTime(),
+                                                s.getStatus().name(),
+                                                s.getLastPointAt()))
+                                .toList();
 
-    public List<TrackingDtos.PointRow> getSessionPoints(UUID sessionId,
-                                                       Instant from,
-                                                       Instant to,
-                                                       Integer max) {
-        return sessionHistoryService.getSessionPoints(sessionId, from, to, max);
-    }
+                return new AdminDtos.SessionPage(
+                                items,
+                                p.getNumber(),
+                                p.getSize(),
+                                p.getTotalElements(),
+                                p.getTotalPages());
+        }
 
-    public Page<AdminDtos.AuditLogRow> listAuditLogs(int page, int size) {
-        int pageNumber = Math.max(0, page);
-        int pageSize = Math.min(100, Math.max(1, size));
-        var pageable = PageRequest.of(pageNumber, pageSize);
-        return auditLogRepository.findAllByOrderByCreatedAtDesc(pageable)
-                .map(log -> new AdminDtos.AuditLogRow(
-                        log.getId(),
-                        log.getAdmin() != null ? log.getAdmin().getId() : null,
-                        log.getAdmin() != null ? log.getAdmin().getUsername() : null,
-                        log.getAction(),
-                        log.getTargetType(),
-                        log.getTargetId(),
-                        log.getMetadata() != null ? log.getMetadata().toString() : null,
-                        log.getIpAddress() != null ? log.getIpAddress().getHostAddress() : null,
-                        log.getUserAgent(),
-                        log.getCreatedAt()
-                ));
-    }
+        public AdminDtos.SessionSummaryResponse getSessionSummary(UUID sessionId) {
+                var summary = sessionSummaryRepository.findById(sessionId)
+                                .orElseThrow(() -> new NotFoundException(
+                                                "Summary not found for session: " + sessionId));
+                var bbox = new AdminDtos.Bbox(
+                                summary.getBboxMinLat(),
+                                summary.getBboxMinLon(),
+                                summary.getBboxMaxLat(),
+                                summary.getBboxMaxLon());
+                return new AdminDtos.SessionSummaryResponse(
+                                sessionId,
+                                summary.getPolyline(),
+                                summary.getSimplifiedPolyline(),
+                                summary.getDistanceM(),
+                                summary.getDurationS(),
+                                summary.getAvgSpeedMps(),
+                                summary.getMaxSpeedMps(),
+                                summary.getPointsCount(),
+                                bbox,
+                                summary.getRawPointsPrunedAt());
+        }
+
+        public List<TrackingDtos.PointRow> getSessionPoints(UUID sessionId,
+                        Instant from,
+                        Instant to,
+                        Integer max) {
+                return sessionHistoryService.getSessionPoints(sessionId, from, to, max);
+        }
+
+        public Page<AdminDtos.AuditLogRow> listAuditLogs(int page, int size) {
+                int pageNumber = Math.max(0, page);
+                int pageSize = Math.min(100, Math.max(1, size));
+                var pageable = PageRequest.of(pageNumber, pageSize);
+                return auditLogRepository.findAllByOrderByCreatedAtDesc(pageable)
+                                .map(log -> new AdminDtos.AuditLogRow(
+                                                log.getId(),
+                                                log.getAdmin() != null ? log.getAdmin().getId() : null,
+                                                log.getAdmin() != null ? log.getAdmin().getUsername() : null,
+                                                log.getAction(),
+                                                log.getTargetType(),
+                                                log.getTargetId(),
+                                                log.getMetadata() != null ? log.getMetadata().toString() : null,
+                                                log.getIpAddress() != null ? log.getIpAddress().getHostAddress() : null,
+                                                log.getUserAgent(),
+                                                log.getCreatedAt()));
+        }
 }

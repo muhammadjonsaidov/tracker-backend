@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import java.net.InetAddress;
 import java.time.Instant;
 
@@ -23,8 +24,8 @@ public class AdminAuditLogEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "admin_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "admin_id")
     private UserEntity admin;
 
     @Column(nullable = false, length = 64)
@@ -36,8 +37,9 @@ public class AdminAuditLogEntity {
     @Column(name = "target_id", columnDefinition = "uuid")
     private java.util.UUID targetId;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private String metadata;
+    private JsonNode metadata;
 
     @JdbcTypeCode(SqlTypes.INET)
     @Column(name = "ip_address", columnDefinition = "inet")

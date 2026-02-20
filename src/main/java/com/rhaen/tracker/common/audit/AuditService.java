@@ -1,5 +1,6 @@
 package com.rhaen.tracker.common.audit;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rhaen.tracker.feature.admin.persistence.AdminAuditLogEntity;
 import com.rhaen.tracker.feature.admin.persistence.AdminAuditLogRepository;
@@ -25,15 +26,8 @@ public class AuditService {
                               UUID targetId,
                               Map<String, Object> metadata) {
         try {
-            if (actorUserId == null) {
-                return;
-            }
-            var user = userRepository.findById(actorUserId).orElse(null);
-            if (user == null) {
-                return;
-            }
-
-            String metadataJson = metadata == null ? null : objectMapper.writeValueAsString(metadata);
+            JsonNode metadataJson = metadata == null ? null : objectMapper.valueToTree(metadata);
+            var user = actorUserId == null ? null : userRepository.findById(actorUserId).orElse(null);
 
             var entry = AdminAuditLogEntity.builder()
                     .admin(user)
@@ -46,5 +40,12 @@ public class AuditService {
         } catch (Exception ex) {
             log.warn("Failed to persist audit log entry, action={}", action, ex);
         }
+    }
+
+    public void logSystemAction(String action,
+                                String targetType,
+                                UUID targetId,
+                                Map<String, Object> metadata) {
+        logUserAction(null, action, targetType, targetId, metadata);
     }
 }

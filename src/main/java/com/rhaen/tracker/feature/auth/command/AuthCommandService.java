@@ -31,10 +31,26 @@ public class AuthCommandService {
 
     @Transactional
     public void register(AuthDtos.RegisterRequest req) {
-        if (userRepository.findByUsername(req.username()).isPresent()) {
+        var byUsername = userRepository.findByUsername(req.username());
+        if (byUsername.isPresent()) {
+            auditService.logUserAction(
+                    byUsername.get().getId(),
+                    "REGISTER_FAILED",
+                    "USER",
+                    byUsername.get().getId(),
+                    java.util.Map.of("reason", "duplicate_username", "username", req.username())
+            );
             throw new BadRequestException("Username already taken");
         }
-        if (userRepository.findByEmail(req.email()).isPresent()) {
+        var byEmail = userRepository.findByEmail(req.email());
+        if (byEmail.isPresent()) {
+            auditService.logUserAction(
+                    byEmail.get().getId(),
+                    "REGISTER_FAILED",
+                    "USER",
+                    byEmail.get().getId(),
+                    java.util.Map.of("reason", "duplicate_email", "email", req.email())
+            );
             throw new BadRequestException("Email already taken");
         }
 
@@ -58,7 +74,16 @@ public class AuthCommandService {
     public AuthDtos.AuthResponse login(AuthDtos.LoginRequest req) {
         UserEntity user = userRepository.findByUsername(req.usernameOrEmail())
                 .or(() -> userRepository.findByEmail(req.usernameOrEmail()))
-                .orElseThrow(() -> new BadRequestException("Invalid credentials"));
+                .orElse(null);
+        if (user == null) {
+            auditService.logSystemAction(
+                    "LOGIN_FAILED",
+                    "AUTH",
+                    null,
+                    java.util.Map.of("reason", "user_not_found", "usernameOrEmail", req.usernameOrEmail())
+            );
+            throw new BadRequestException("Invalid credentials");
+        }
 
         if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
             auditService.logUserAction(

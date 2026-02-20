@@ -54,8 +54,8 @@ spring:
 
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6363}
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
       timeout: 3000ms
       connect-timeout: 5000ms
 
@@ -81,7 +81,7 @@ management:
 
 app:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
   tracking:
     last-location:
       ttl-minutes: 43200   # 30 kun (dashboard last stop ham turishi uchun)

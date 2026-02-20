@@ -268,6 +268,13 @@ public class TrackingCommandService {
                 .orElseThrow(() -> new NotFoundException("Session not found: " + sessionId));
 
         if (!session.getUser().getId().equals(userId)) {
+            auditService.logUserAction(
+                    userId,
+                    "AUTHORIZATION_FAILED",
+                    "SESSION",
+                    sessionId,
+                    Map.of("reason", "session_not_owned")
+            );
             throw new BadRequestException("Session does not belong to user");
         }
         return session;

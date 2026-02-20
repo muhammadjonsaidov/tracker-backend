@@ -144,7 +144,7 @@ public class AdminQueryService {
                         log.getAction(),
                         log.getTargetType(),
                         log.getTargetId(),
-                        log.getMetadata(),
+                        log.getMetadata() != null ? log.getMetadata().toString() : null,
                         log.getIpAddress() != null ? log.getIpAddress().getHostAddress() : null,
                         log.getUserAgent(),
                         log.getCreatedAt()

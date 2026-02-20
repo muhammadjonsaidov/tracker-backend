@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -28,8 +29,8 @@ public class SseQueryTokenAuthFilter extends OncePerRequestFilter {
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
 
-        String uri = request.getRequestURI();
-        boolean isSseAdminStream = uri != null && uri.startsWith("/api/v1/admin/stream/");
+        String servletPath = request.getServletPath();
+        boolean isSseAdminStream = servletPath != null && servletPath.startsWith("/api/v1/admin/stream/");
 
         if (isSseAdminStream && SecurityContextHolder.getContext().getAuthentication() == null) {
             String token = request.getParameter("access_token");
@@ -39,14 +40,16 @@ public class SseQueryTokenAuthFilter extends OncePerRequestFilter {
                 try {
                     Jwt jwt = jwtDecoder.decode(token);
                     String typ = jwt.getClaimAsString("typ");
-                    if (!"stream".equals(typ)) {
-                        filterChain.doFilter(request, response);
-                        return;
+                    if ("stream".equals(typ)) {
+                        Optional.ofNullable(jwtAuthenticationConverter.convert(jwt))
+                                .ifPresent(auth -> {
+                                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                                    SecurityContextHolder.getContext().setAuthentication(auth);
+                                });
                     }
-                    var auth = jwtAuthenticationConverter.convert(jwt);
-                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(auth);
-                } catch (Exception ignore) {}
+                } catch (Exception ex) {
+                    logger.warn("Invalid SSE stream token", ex);
+                }
             }
         }
 

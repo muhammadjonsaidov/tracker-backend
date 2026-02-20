@@ -2,7 +2,6 @@ package com.rhaen.tracker.feature.admin.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rhaen.tracker.common.exception.NotFoundException;
-import com.rhaen.tracker.common.util.GeoUtils;
 import com.rhaen.tracker.feature.admin.dto.AdminDtos;
 import com.rhaen.tracker.feature.admin.persistence.AdminAuditLogEntity;
 import com.rhaen.tracker.feature.admin.persistence.AdminAuditLogRepository;

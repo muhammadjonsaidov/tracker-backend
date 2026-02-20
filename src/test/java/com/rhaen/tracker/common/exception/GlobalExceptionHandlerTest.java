@@ -8,6 +8,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.HandlerMethod;
 
+import java.util.Objects;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -48,7 +50,7 @@ class GlobalExceptionHandlerTest {
 
         var resp = handler.validation(ex);
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(resp.getBody().message()).contains("lat");
+        assertThat(Objects.requireNonNull(resp.getBody()).message()).contains("lat");
     }
 
     @SuppressWarnings("unused")
@@ -62,7 +64,7 @@ class GlobalExceptionHandlerTest {
         var resp = handler.generic(new RuntimeException("boom"), req);
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(resp.getBody().message()).isEqualTo("Stream error");
+        assertThat(Objects.requireNonNull(resp.getBody()).message()).isEqualTo("Stream error");
     }
 
     @Test
@@ -73,6 +75,6 @@ class GlobalExceptionHandlerTest {
         var resp = handler.generic(new RuntimeException("boom"), req);
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(resp.getBody().message()).isEqualTo("Internal error");
+        assertThat(Objects.requireNonNull(resp.getBody()).message()).isEqualTo("Internal error");
     }
 }

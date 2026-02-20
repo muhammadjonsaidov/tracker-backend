@@ -22,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -176,11 +177,10 @@ class AuthCommandServiceTest {
             JwtClaimsSet claims = p.getClaims();
             assertThat(claims.getSubject()).isEqualTo("user1");
             assertThat((Object) claims.getClaim("uid")).isEqualTo(id.toString());
-            @SuppressWarnings("unchecked")
-            List<String> roles = (List<String>) claims.getClaim("roles");
+            List<String> roles = claims.getClaim("roles");
             assertThat(roles).contains("ADMIN");
             JwsHeader header = p.getJwsHeader();
-            assertThat(header.getAlgorithm().getName()).isEqualTo(MacAlgorithm.HS256.getName());
+            assertThat(Objects.requireNonNull(header).getAlgorithm().getName()).isEqualTo(MacAlgorithm.HS256.getName());
             return new Jwt(
                     "token",
                     Instant.now(),

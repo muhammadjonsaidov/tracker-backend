@@ -55,7 +55,6 @@ class TrackingCommandServiceTest {
     private RedisRateLimiter rateLimiter;
     @Mock
     private TrackingPointIngestRepository ingestRepository;
-    private MeterRegistry meterRegistry;
     @Mock
     private AuditService auditService;
     @Mock
@@ -76,7 +75,7 @@ class TrackingCommandServiceTest {
 
     @BeforeEach
     void setUp() {
-        meterRegistry = new SimpleMeterRegistry();
+        MeterRegistry meterRegistry = new SimpleMeterRegistry();
         service = new TrackingCommandService(
                 userRepository,
                 sessionRepository,

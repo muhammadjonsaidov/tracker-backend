@@ -1,7 +1,7 @@
 package com.rhaen.tracker.feature.tracking.command;
 
 import com.rhaen.tracker.common.audit.AuditService;
-import com.rhaen.tracker.common.exception.BadRequestException;
+import com.rhaen.tracker.common.exception.ConflictException;
 import com.rhaen.tracker.common.exception.NotFoundException;
 import com.rhaen.tracker.common.exception.TooManyRequestsException;
 import com.rhaen.tracker.feature.tracking.dto.TrackingDtos;
@@ -85,8 +85,7 @@ class TrackingCommandServiceTest {
                 rateLimiter,
                 ingestRepository,
                 auditService,
-                meterRegistry
-        );
+                meterRegistry);
         ReflectionTestUtils.setField(service, "sessionStartCounter", sessionStartCounter);
         ReflectionTestUtils.setField(service, "sessionStopCounter", sessionStopCounter);
         ReflectionTestUtils.setField(service, "ingestRequestsCounter", ingestRequestsCounter);
@@ -123,7 +122,7 @@ class TrackingCommandServiceTest {
         when(sessionRepository.findActiveByUserId(userId)).thenReturn(Optional.of(active));
 
         assertThatThrownBy(() -> service.startSession(userId))
-                .isInstanceOf(BadRequestException.class)
+                .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("already has ACTIVE");
     }
 
@@ -154,7 +153,8 @@ class TrackingCommandServiceTest {
         UUID sessionId = UUID.randomUUID();
         when(sessionRepository.findById(sessionId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.stopSession(sessionId, userId, new TrackingDtos.StopSessionRequest(null, null, null)))
+        assertThatThrownBy(
+                () -> service.stopSession(sessionId, userId, new TrackingDtos.StopSessionRequest(null, null, null)))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -182,9 +182,7 @@ class TrackingCommandServiceTest {
                         1f,
                         20f,
                         "gps",
-                        false
-                )
-        ));
+                        false)));
 
         assertThatThrownBy(() -> service.ingestPoints(sessionId, userId, req))
                 .isInstanceOf(TooManyRequestsException.class);

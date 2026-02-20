@@ -1,5 +1,9 @@
 package com.rhaen.tracker.common.exception;
 
-public class BadRequestException extends RuntimeException {
-    public BadRequestException(String message) { super(message); }
+import org.springframework.http.HttpStatus;
+
+public class BadRequestException extends TrackerException {
+    public BadRequestException(String message) {
+        super(message, HttpStatus.BAD_REQUEST);
+    }
 }

@@ -1,6 +1,7 @@
 package com.rhaen.tracker.feature.tracking.history;
 
 import com.rhaen.tracker.common.exception.BadRequestException;
+import com.rhaen.tracker.common.exception.ForbiddenException;
 import com.rhaen.tracker.common.exception.NotFoundException;
 import com.rhaen.tracker.feature.tracking.dto.TrackingDtos;
 import com.rhaen.tracker.feature.tracking.persistence.TrackingPointEntity;
@@ -45,8 +46,10 @@ public class SessionHistoryService {
                 ? pointRepository.findBySessionIdAndDeviceTimestampBetweenOrderByDeviceTimestampAsc(sessionId, from, to)
                 : pointRepository.findBySessionIdOrderByDeviceTimestampAsc(sessionId);
 
-        if (points.isEmpty()) return List.of();
-        if (points.size() <= max) return map(points);
+        if (points.isEmpty())
+            return List.of();
+        if (points.size() <= max)
+            return map(points);
 
         // downsample
         int step = (int) Math.ceil(points.size() / (double) max);
@@ -63,18 +66,18 @@ public class SessionHistoryService {
     }
 
     public TrackingDtos.PointsResponse getSessionPointsForUser(UUID sessionId,
-                                                              UUID userId,
-                                                              boolean isAdmin,
-                                                              Instant from,
-                                                              Instant to,
-                                                              Integer maxPoints,
-                                                              boolean downsample,
-                                                              double simplifyEpsM) {
+            UUID userId,
+            boolean isAdmin,
+            Instant from,
+            Instant to,
+            Integer maxPoints,
+            boolean downsample,
+            double simplifyEpsM) {
         TrackingSessionEntity session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new NotFoundException("Session not found: " + sessionId));
 
         if (!isAdmin && !session.getUser().getId().equals(userId)) {
-            throw new BadRequestException("Session does not belong to user");
+            throw new ForbiddenException("Session does not belong to user");
         }
 
         int max = resolveMax(maxPoints);
@@ -123,10 +126,12 @@ public class SessionHistoryService {
             return pointRepository.findBySessionIdOrderByDeviceTimestampAsc(sessionId);
         }
         if (from != null && to != null) {
-            return pointRepository.findBySessionIdAndDeviceTimestampBetweenOrderByDeviceTimestampAsc(sessionId, from, to);
+            return pointRepository.findBySessionIdAndDeviceTimestampBetweenOrderByDeviceTimestampAsc(sessionId, from,
+                    to);
         }
         if (from != null) {
-            return pointRepository.findBySessionIdAndDeviceTimestampGreaterThanEqualOrderByDeviceTimestampAsc(sessionId, from);
+            return pointRepository.findBySessionIdAndDeviceTimestampGreaterThanEqualOrderByDeviceTimestampAsc(sessionId,
+                    from);
         }
         return pointRepository.findBySessionIdAndDeviceTimestampLessThanEqualOrderByDeviceTimestampAsc(sessionId, to);
     }
@@ -142,8 +147,7 @@ public class SessionHistoryService {
                     lon,
                     p.getAccuracyM(),
                     p.getSpeedMps(),
-                    p.getHeadingDeg()
-            );
+                    p.getHeadingDeg());
         }).toList();
     }
 
@@ -153,7 +157,8 @@ public class SessionHistoryService {
     }
 
     private List<TrackingPointEntity> downsampleByStep(List<TrackingPointEntity> points, int max) {
-        if (max <= 0 || points.size() <= max) return points;
+        if (max <= 0 || points.size() <= max)
+            return points;
         int step = (int) Math.ceil(points.size() / (double) max);
         List<TrackingPointEntity> out = new ArrayList<>(max + 2);
         for (int i = 0; i < points.size(); i += step) {
@@ -166,7 +171,8 @@ public class SessionHistoryService {
     }
 
     private List<TrackingPointEntity> simplifyRdp(List<TrackingPointEntity> points, double epsilonMeters) {
-        if (points == null || points.size() < 3) return points;
+        if (points == null || points.size() < 3)
+            return points;
 
         int n = points.size();
         double lat0 = points.getFirst().getPoint().getY();
@@ -179,13 +185,15 @@ public class SessionHistoryService {
 
         List<TrackingPointEntity> out = new ArrayList<>();
         for (int i = 0; i < n; i++) {
-            if (keep[i]) out.add(points.get(i));
+            if (keep[i])
+                out.add(points.get(i));
         }
         return out;
     }
 
     private void rdp(List<TrackingPointEntity> points, int start, int end, double eps, boolean[] keep, double lat0) {
-        if (end <= start + 1) return;
+        if (end <= start + 1)
+            return;
 
         double maxDist = -1;
         int index = -1;

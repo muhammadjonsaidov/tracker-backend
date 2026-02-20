@@ -21,60 +21,66 @@ import java.util.List;
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
-    private final CorsProperties corsProperties;
+        private final CorsProperties corsProperties;
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http,
-            JwtAuthenticationConverter jwtAuthenticationConverter,
-            SseQueryTokenAuthFilter sseQueryTokenAuthFilter
-    ) throws Exception {
+        @Bean
+        public SecurityFilterChain securityFilterChain(
+                        HttpSecurity http,
+                        JwtAuthenticationConverter jwtAuthenticationConverter,
+                        SseQueryTokenAuthFilter sseQueryTokenAuthFilter,
+                        CustomAuthenticationEntryPoint authenticationEntryPoint,
+                        CustomAccessDeniedHandler accessDeniedHandler) throws Exception {
 
-        return http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(sseQueryTokenAuthFilter, BearerTokenAuthenticationFilter.class)
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**"
-                        ).permitAll()
-                        .requestMatchers("/actuator/metrics/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/auth/**", "/health").permitAll()
+                return http
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                .csrf(AbstractHttpConfigurer::disable)
+                                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .addFilterBefore(sseQueryTokenAuthFilter, BearerTokenAuthenticationFilter.class)
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers("/actuator/health", "/actuator/info",
+                                                                "/actuator/prometheus")
+                                                .permitAll()
+                                                .requestMatchers(
+                                                                "/swagger-ui/**",
+                                                                "/swagger-ui.html",
+                                                                "/v3/api-docs/**")
+                                                .permitAll()
+                                                .requestMatchers("/actuator/metrics/**").hasRole("ADMIN")
+                                                .requestMatchers("/api/v1/auth/**", "/health").permitAll()
 
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/tracking/**").hasAnyRole("USER", "ADMIN")
+                                                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                                                .requestMatchers("/api/v1/tracking/**").hasAnyRole("USER", "ADMIN")
 
-                        .anyRequest().denyAll()
-                )
+                                                .anyRequest().denyAll())
 
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
-                )
+                                .oauth2ResourceServer(oauth2 -> oauth2
+                                                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
+                                                .authenticationEntryPoint(authenticationEntryPoint)
+                                                .accessDeniedHandler(accessDeniedHandler))
 
-                .build();
-    }
+                                .exceptionHandling(eh -> eh
+                                                .authenticationEntryPoint(authenticationEntryPoint)
+                                                .accessDeniedHandler(accessDeniedHandler))
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
+                                .build();
+        }
 
-        config.setAllowedOriginPatterns(corsProperties.allowedOrigins());
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of(
-                "Authorization",
-                "Content-Type",
-                "X-Correlation-Id",
-                "ngrok-skip-browser-warning"
-        ));
-        config.setExposedHeaders(List.of("X-Correlation-Id"));
-        config.setAllowCredentials(false);
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration config = new CorsConfiguration();
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
+                config.setAllowedOriginPatterns(corsProperties.allowedOrigins());
+                config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+                config.setAllowedHeaders(List.of(
+                                "Authorization",
+                                "Content-Type",
+                                "X-Correlation-Id",
+                                "ngrok-skip-browser-warning"));
+                config.setExposedHeaders(List.of("X-Correlation-Id"));
+                config.setAllowCredentials(false);
+
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", config);
+                return source;
+        }
 }

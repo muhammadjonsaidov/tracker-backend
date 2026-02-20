@@ -1,6 +1,7 @@
 package com.rhaen.tracker.feature.tracking.history;
 
 import com.rhaen.tracker.common.exception.BadRequestException;
+import com.rhaen.tracker.common.exception.ForbiddenException;
 import com.rhaen.tracker.common.exception.NotFoundException;
 import com.rhaen.tracker.common.util.GeoUtils;
 import com.rhaen.tracker.feature.tracking.dto.TrackingDtos;
@@ -39,8 +40,7 @@ class SessionHistoryServiceTest {
         service = new SessionHistoryService(
                 sessionRepository,
                 pointRepository,
-                new TrackingHistoryProperties(3, 10)
-        );
+                new TrackingHistoryProperties(3, 10));
     }
 
     @Test
@@ -74,8 +74,7 @@ class SessionHistoryServiceTest {
                 point(2, 41.1, 69.1),
                 point(3, 41.2, 69.2),
                 point(4, 41.3, 69.3),
-                point(5, 41.4, 69.4)
-        );
+                point(5, 41.4, 69.4));
 
         when(pointRepository.countBySessionId(sessionId)).thenReturn(5L);
         when(pointRepository.findBySessionIdOrderByDeviceTimestampAsc(sessionId)).thenReturn(points);
@@ -95,7 +94,7 @@ class SessionHistoryServiceTest {
         when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session(sessionId, ownerId)));
 
         assertThatThrownBy(() -> service.getSessionPointsForUser(sessionId, otherUser, false, null, null, 10, false, 0))
-                .isInstanceOf(BadRequestException.class)
+                .isInstanceOf(ForbiddenException.class)
                 .hasMessageContaining("does not belong");
     }
 
@@ -107,7 +106,8 @@ class SessionHistoryServiceTest {
         when(pointRepository.countBySessionId(sessionId)).thenReturn(0L);
         when(pointRepository.findBySessionIdOrderByDeviceTimestampAsc(sessionId)).thenReturn(List.of());
 
-        TrackingDtos.PointsResponse result = service.getSessionPointsForUser(sessionId, userId, false, null, null, 5, true, 5.0);
+        TrackingDtos.PointsResponse result = service.getSessionPointsForUser(sessionId, userId, false, null, null, 5,
+                true, 5.0);
 
         assertThat(result.points()).isEmpty();
         assertThat(result.truncated()).isFalse();
@@ -124,12 +124,12 @@ class SessionHistoryServiceTest {
                 point(1, 41.0, 69.0),
                 point(2, 41.1, 69.1),
                 point(3, 41.2, 69.2),
-                point(4, 41.3, 69.3)
-        );
+                point(4, 41.3, 69.3));
         when(pointRepository.countBySessionId(sessionId)).thenReturn(4L);
         when(pointRepository.findBySessionIdOrderByDeviceTimestampAsc(sessionId)).thenReturn(points);
 
-        TrackingDtos.PointsResponse result = service.getSessionPointsForUser(sessionId, userId, false, null, null, 2, false, 0);
+        TrackingDtos.PointsResponse result = service.getSessionPointsForUser(sessionId, userId, false, null, null, 2,
+                false, 0);
 
         assertThat(result.points()).hasSize(2);
         assertThat(result.truncated()).isTrue();
@@ -149,19 +149,23 @@ class SessionHistoryServiceTest {
         when(pointRepository.findBySessionIdAndDeviceTimestampBetweenOrderByDeviceTimestampAsc(sessionId, from, to))
                 .thenReturn(List.of(point(1, 41.0, 69.0)));
 
-        TrackingDtos.PointsResponse between = service.getSessionPointsForUser(sessionId, userId, false, from, to, 10, true, 0);
+        TrackingDtos.PointsResponse between = service.getSessionPointsForUser(sessionId, userId, false, from, to, 10,
+                true, 0);
         assertThat(between.points()).hasSize(1);
 
         when(pointRepository.countBySessionIdAndDeviceTimestampGreaterThanEqual(sessionId, from)).thenReturn(1L);
-        when(pointRepository.findBySessionIdAndDeviceTimestampGreaterThanEqualOrderByDeviceTimestampAsc(sessionId, from))
+        when(pointRepository.findBySessionIdAndDeviceTimestampGreaterThanEqualOrderByDeviceTimestampAsc(sessionId,
+                from))
                 .thenReturn(List.of(point(2, 41.2, 69.2)));
-        TrackingDtos.PointsResponse fromOnly = service.getSessionPointsForUser(sessionId, userId, false, from, null, 10, true, 0);
+        TrackingDtos.PointsResponse fromOnly = service.getSessionPointsForUser(sessionId, userId, false, from, null, 10,
+                true, 0);
         assertThat(fromOnly.points()).hasSize(1);
 
         when(pointRepository.countBySessionIdAndDeviceTimestampLessThanEqual(sessionId, to)).thenReturn(1L);
         when(pointRepository.findBySessionIdAndDeviceTimestampLessThanEqualOrderByDeviceTimestampAsc(sessionId, to))
                 .thenReturn(List.of(point(3, 41.3, 69.3)));
-        TrackingDtos.PointsResponse toOnly = service.getSessionPointsForUser(sessionId, userId, false, null, to, 10, true, 0);
+        TrackingDtos.PointsResponse toOnly = service.getSessionPointsForUser(sessionId, userId, false, null, to, 10,
+                true, 0);
         assertThat(toOnly.points()).hasSize(1);
 
         verify(pointRepository).countBySessionIdAndDeviceTimestampBetween(sessionId, from, to);
@@ -180,12 +184,12 @@ class SessionHistoryServiceTest {
                 point(2, 41.0004, 69.0000),
                 point(3, 41.0008, 69.0000),
                 point(4, 41.0012, 69.0000),
-                point(5, 41.0016, 69.0000)
-        );
+                point(5, 41.0016, 69.0000));
         when(pointRepository.countBySessionId(sessionId)).thenReturn((long) points.size());
         when(pointRepository.findBySessionIdOrderByDeviceTimestampAsc(sessionId)).thenReturn(points);
 
-        TrackingDtos.PointsResponse result = service.getSessionPointsForUser(sessionId, userId, false, null, null, 10, true, 50.0);
+        TrackingDtos.PointsResponse result = service.getSessionPointsForUser(sessionId, userId, false, null, null, 10,
+                true, 50.0);
 
         assertThat(result.points().size()).isLessThanOrEqualTo(points.size());
         assertThat(result.total()).isEqualTo(points.size());
@@ -194,7 +198,8 @@ class SessionHistoryServiceTest {
     private static TrackingSessionEntity session(UUID sessionId, UUID userId) {
         return TrackingSessionEntity.builder()
                 .id(sessionId)
-                .user(UserEntity.builder().id(userId).username("u").email("e@e.com").passwordHash("x").role(UserEntity.Role.USER).build())
+                .user(UserEntity.builder().id(userId).username("u").email("e@e.com").passwordHash("x")
+                        .role(UserEntity.Role.USER).build())
                 .status(TrackingSessionEntity.Status.ACTIVE)
                 .startTime(Instant.now())
                 .updatedAt(Instant.now())

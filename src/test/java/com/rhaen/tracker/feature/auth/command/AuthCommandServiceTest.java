@@ -1,7 +1,8 @@
 package com.rhaen.tracker.feature.auth.command;
 
 import com.rhaen.tracker.common.audit.AuditService;
-import com.rhaen.tracker.common.exception.BadRequestException;
+import com.rhaen.tracker.common.exception.ConflictException;
+import com.rhaen.tracker.common.exception.UnauthorizedException;
 import com.rhaen.tracker.feature.auth.dto.AuthDtos;
 import com.rhaen.tracker.feature.user.persistence.UserEntity;
 import com.rhaen.tracker.feature.user.persistence.UserRepository;
@@ -87,7 +88,7 @@ class AuthCommandServiceTest {
         when(userRepository.findByUsername("user1")).thenReturn(Optional.of(new UserEntity()));
 
         assertThatThrownBy(() -> service.register(req))
-                .isInstanceOf(BadRequestException.class)
+                .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("Username already taken");
     }
 
@@ -98,7 +99,7 @@ class AuthCommandServiceTest {
         when(userRepository.findByEmail("u1@mail.com")).thenReturn(Optional.of(new UserEntity()));
 
         assertThatThrownBy(() -> service.register(req))
-                .isInstanceOf(BadRequestException.class)
+                .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("Email already taken");
     }
 
@@ -138,7 +139,7 @@ class AuthCommandServiceTest {
         when(userRepository.findByEmail("missing")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.login(new AuthDtos.LoginRequest("missing", "secret")))
-                .isInstanceOf(BadRequestException.class)
+                .isInstanceOf(UnauthorizedException.class)
                 .hasMessageContaining("Invalid credentials");
     }
 
@@ -154,7 +155,7 @@ class AuthCommandServiceTest {
         when(passwordEncoder.matches("bad", "hashed")).thenReturn(false);
 
         assertThatThrownBy(() -> service.login(new AuthDtos.LoginRequest("user1", "bad")))
-                .isInstanceOf(BadRequestException.class)
+                .isInstanceOf(UnauthorizedException.class)
                 .hasMessageContaining("Invalid credentials");
     }
 

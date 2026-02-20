@@ -8,7 +8,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -53,7 +52,7 @@ public class LastLocationBroadcaster {
                 emitter.send(SseEmitter.event()
                         .name("ping")
                         .data(Instant.now().toString()));
-            } catch (IOException ex) {
+            } catch (Exception ex) {
                 emitters.remove(emitter);
             }
         }

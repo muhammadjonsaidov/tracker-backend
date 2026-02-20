@@ -1,7 +1,8 @@
 package com.rhaen.tracker.feature.auth.command;
 
 import com.rhaen.tracker.common.audit.AuditService;
-import com.rhaen.tracker.common.exception.BadRequestException;
+import com.rhaen.tracker.common.exception.ConflictException;
+import com.rhaen.tracker.common.exception.UnauthorizedException;
 import com.rhaen.tracker.feature.auth.dto.AuthDtos;
 import com.rhaen.tracker.feature.user.persistence.UserEntity;
 import com.rhaen.tracker.feature.user.persistence.UserRepository;
@@ -39,7 +40,7 @@ public class AuthCommandService {
                                         "USER",
                                         byUsername.get().getId(),
                                         java.util.Map.of("reason", "duplicate_username", "username", req.username()));
-                        throw new BadRequestException("Username already taken");
+                        throw new ConflictException("Username already taken");
                 }
                 var byEmail = userRepository.findByEmail(req.email());
                 if (byEmail.isPresent()) {
@@ -49,7 +50,7 @@ public class AuthCommandService {
                                         "USER",
                                         byEmail.get().getId(),
                                         java.util.Map.of("reason", "duplicate_email", "email", req.email()));
-                        throw new BadRequestException("Email already taken");
+                        throw new ConflictException("Email already taken");
                 }
 
                 UserEntity user = UserEntity.builder()
@@ -79,7 +80,7 @@ public class AuthCommandService {
                                         null,
                                         java.util.Map.of("reason", "user_not_found", "usernameOrEmail",
                                                         req.usernameOrEmail()));
-                        throw new BadRequestException("Invalid credentials");
+                        throw new UnauthorizedException("Invalid credentials");
                 }
 
                 if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
@@ -89,7 +90,7 @@ public class AuthCommandService {
                                         "USER",
                                         user.getId(),
                                         java.util.Map.of("reason", "invalid_password"));
-                        throw new BadRequestException("Invalid credentials");
+                        throw new UnauthorizedException("Invalid credentials");
                 }
 
                 String token = generateAccessToken(user);

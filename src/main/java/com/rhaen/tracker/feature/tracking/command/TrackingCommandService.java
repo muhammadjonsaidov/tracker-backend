@@ -2,6 +2,8 @@ package com.rhaen.tracker.feature.tracking.command;
 
 import com.rhaen.tracker.common.audit.AuditService;
 import com.rhaen.tracker.common.exception.BadRequestException;
+import com.rhaen.tracker.common.exception.ConflictException;
+import com.rhaen.tracker.common.exception.ForbiddenException;
 import com.rhaen.tracker.common.exception.NotFoundException;
 import com.rhaen.tracker.common.exception.TooManyRequestsException;
 import com.rhaen.tracker.common.util.GeoUtils;
@@ -65,7 +67,7 @@ public class TrackingCommandService {
                 .orElseThrow(() -> new NotFoundException("User not found: " + userId));
 
         sessionRepository.findActiveByUserId(userId).ifPresent(s -> {
-            throw new BadRequestException("User already has ACTIVE session: " + s.getId());
+            throw new ConflictException("User already has ACTIVE session: " + s.getId());
         });
 
         TrackingSessionEntity session = TrackingSessionEntity.builder()
@@ -83,14 +85,12 @@ public class TrackingCommandService {
                 "SESSION_START",
                 "SESSION",
                 session.getId(),
-                Map.of("status", session.getStatus().name())
-        );
+                Map.of("status", session.getStatus().name()));
 
         return new TrackingDtos.StartSessionResponse(
                 session.getId(),
                 session.getStartTime(),
-                session.getStatus().name()
-        );
+                session.getStatus().name());
     }
 
     @Transactional
@@ -131,8 +131,7 @@ public class TrackingCommandService {
                     p.getY(),
                     p.getX(),
                     stopTime,
-                    null, null, null
-            ));
+                    null, null, null));
         }
 
         sessionStopCounter.increment();
@@ -141,8 +140,7 @@ public class TrackingCommandService {
                 "SESSION_STOP",
                 "SESSION",
                 session.getId(),
-                Map.of("status", session.getStatus().name())
-        );
+                Map.of("status", session.getStatus().name()));
     }
 
     /**
@@ -178,8 +176,7 @@ public class TrackingCommandService {
                         "RATE_LIMIT_VIOLATION",
                         "SESSION",
                         sessionId,
-                        Map.of("current", rl.current(), "attemptedPoints", rawCount)
-                );
+                        Map.of("current", rl.current(), "attemptedPoints", rawCount));
                 throw new TooManyRequestsException("Rate limit exceeded (points/min). Current=" + rl.current());
             }
 
@@ -196,13 +193,12 @@ public class TrackingCommandService {
                                     p.speedMps(),
                                     p.headingDeg(),
                                     p.provider(),
-                                    Boolean.TRUE.equals(p.mock())
-                            ),
-                            (first, second) -> first
-                    ));
+                                    Boolean.TRUE.equals(p.mock())),
+                            (first, second) -> first));
 
             List<TrackingPointIngestRepository.IngestPointRow> rows = unique.values().stream().toList();
-            if (rows.isEmpty()) return 0;
+            if (rows.isEmpty())
+                return 0;
 
             Instant receivedAt = Instant.now();
 
@@ -238,8 +234,7 @@ public class TrackingCommandService {
                     latest.deviceTimestamp(),
                     latest.accuracyM(),
                     latest.speedMps(),
-                    latest.headingDeg()
-            ));
+                    latest.headingDeg()));
 
             pointsInsertedCounter.increment(inserted);
             return inserted;
@@ -251,7 +246,7 @@ public class TrackingCommandService {
     @PostConstruct
     void initMetrics() {
         sessionStartCounter = Counter.builder("tracker.session.start.total").register(meterRegistry);
-        sessionStopCounter  = Counter.builder("tracker.session.stop.total").register(meterRegistry);
+        sessionStopCounter = Counter.builder("tracker.session.stop.total").register(meterRegistry);
 
         ingestRequestsCounter = Counter.builder("tracker.ingest.requests.total").register(meterRegistry);
         pointsAcceptedCounter = Counter.builder("tracker.ingest.points.accepted.total").register(meterRegistry);
@@ -273,9 +268,8 @@ public class TrackingCommandService {
                     "AUTHORIZATION_FAILED",
                     "SESSION",
                     sessionId,
-                    Map.of("reason", "session_not_owned")
-            );
-            throw new BadRequestException("Session does not belong to user");
+                    Map.of("reason", "session_not_owned"));
+            throw new ForbiddenException("Session does not belong to user");
         }
         return session;
     }

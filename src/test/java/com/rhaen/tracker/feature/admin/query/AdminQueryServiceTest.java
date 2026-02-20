@@ -36,18 +36,25 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class AdminQueryServiceTest {
 
-    @Mock private UserRepository userRepository;
-    @Mock private TrackingSessionRepository sessionRepository;
-    @Mock private SessionSummaryRepository summaryRepository;
-    @Mock private SessionHistoryService historyService;
-    @Mock private LastLocationCache lastLocationCache;
-    @Mock private AdminAuditLogRepository auditRepository;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private TrackingSessionRepository sessionRepository;
+    @Mock
+    private SessionSummaryRepository summaryRepository;
+    @Mock
+    private SessionHistoryService historyService;
+    @Mock
+    private LastLocationCache lastLocationCache;
+    @Mock
+    private AdminAuditLogRepository auditRepository;
 
     private AdminQueryService service;
 
     @BeforeEach
     void setUp() {
-        service = new AdminQueryService(userRepository, sessionRepository, summaryRepository, historyService, lastLocationCache, auditRepository);
+        service = new AdminQueryService(userRepository, sessionRepository, summaryRepository, historyService,
+                lastLocationCache, auditRepository);
     }
 
     @Test
@@ -60,19 +67,23 @@ class AdminQueryServiceTest {
                 .role(UserEntity.Role.ADMIN)
                 .createdAt(Instant.now())
                 .build();
-        when(userRepository.findAll()).thenReturn(List.of(u));
+        when(userRepository.findAll(any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(u)));
 
-        List<AdminDtos.UserRow> rows = service.listUsers();
+        AdminDtos.UserPage rows = service.listUsers(0, 10);
 
-        assertThat(rows).hasSize(1);
-        assertThat(rows.getFirst().role()).isEqualTo("ADMIN");
+        assertThat(rows.items()).hasSize(1);
+        assertThat(rows.items().getFirst().role()).isEqualTo("ADMIN");
     }
 
     @Test
     void listLastLocations_sortsActiveFirst_thenTsDesc() {
-        LastLocationSnapshot activeOld = new LastLocationSnapshot(UUID.randomUUID(), UUID.randomUUID(), "ACTIVE", true, 41, 69, Instant.now().minusSeconds(60), null, null, null);
-        LastLocationSnapshot stoppedNew = new LastLocationSnapshot(UUID.randomUUID(), UUID.randomUUID(), "STOPPED", false, 41, 69, Instant.now(), null, null, null);
-        LastLocationSnapshot activeNew = new LastLocationSnapshot(UUID.randomUUID(), UUID.randomUUID(), "ACTIVE", true, 41, 69, Instant.now(), null, null, null);
+        LastLocationSnapshot activeOld = new LastLocationSnapshot(UUID.randomUUID(), UUID.randomUUID(), "ACTIVE", true,
+                41, 69, Instant.now().minusSeconds(60), null, null, null);
+        LastLocationSnapshot stoppedNew = new LastLocationSnapshot(UUID.randomUUID(), UUID.randomUUID(), "STOPPED",
+                false, 41, 69, Instant.now(), null, null, null);
+        LastLocationSnapshot activeNew = new LastLocationSnapshot(UUID.randomUUID(), UUID.randomUUID(), "ACTIVE", true,
+                41, 69, Instant.now(), null, null, null);
         when(lastLocationCache.getAll()).thenReturn(List.of(activeOld, stoppedNew, activeNew));
         when(lastLocationCache.isStale(any())).thenReturn(false);
 
@@ -90,7 +101,8 @@ class AdminQueryServiceTest {
         UUID userId = UUID.randomUUID();
         TrackingSessionEntity session = TrackingSessionEntity.builder()
                 .id(UUID.randomUUID())
-                .user(UserEntity.builder().id(userId).username("u").email("e@e.com").passwordHash("x").role(UserEntity.Role.USER).build())
+                .user(UserEntity.builder().id(userId).username("u").email("e@e.com").passwordHash("x")
+                        .role(UserEntity.Role.USER).build())
                 .status(TrackingSessionEntity.Status.ACTIVE)
                 .startTime(Instant.now())
                 .build();
@@ -98,7 +110,8 @@ class AdminQueryServiceTest {
         when(sessionRepository.search(eq(userId), eq(TrackingSessionEntity.Status.ACTIVE), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(session)));
 
-        AdminDtos.SessionPage page = service.listSessions(userId, TrackingSessionEntity.Status.ACTIVE, null, null, 0, 20);
+        AdminDtos.SessionPage page = service.listSessions(userId, TrackingSessionEntity.Status.ACTIVE, null, null, 0,
+                20);
 
         assertThat(page.items()).hasSize(1);
         assertThat(page.totalElements()).isEqualTo(1);
@@ -141,7 +154,8 @@ class AdminQueryServiceTest {
     @Test
     void getSessionPoints_delegates() {
         UUID sid = UUID.randomUUID();
-        List<TrackingDtos.PointRow> rows = List.of(new TrackingDtos.PointRow(Instant.now(), 41.0, 69.0, null, null, null));
+        List<TrackingDtos.PointRow> rows = List
+                .of(new TrackingDtos.PointRow(Instant.now(), 41.0, 69.0, null, null, null));
         when(historyService.getSessionPoints(eq(sid), any(), any(), any())).thenReturn(rows);
 
         assertThat(service.getSessionPoints(sid, null, null, 100)).hasSize(1);
@@ -149,7 +163,8 @@ class AdminQueryServiceTest {
 
     @Test
     void listAuditLogs_mapsNullableFields() throws Exception {
-        UserEntity admin = UserEntity.builder().id(UUID.randomUUID()).username("admin").email("a@a.com").passwordHash("x").role(UserEntity.Role.ADMIN).build();
+        UserEntity admin = UserEntity.builder().id(UUID.randomUUID()).username("admin").email("a@a.com")
+                .passwordHash("x").role(UserEntity.Role.ADMIN).build();
         AdminAuditLogEntity a1 = AdminAuditLogEntity.builder()
                 .id(1L)
                 .admin(admin)
@@ -175,6 +190,7 @@ class AdminQueryServiceTest {
         assertThat(page.getContent()).hasSize(2);
         assertThat(page.getContent().getFirst().metadata()).contains("\"k\":1");
         assertThat(page.getContent().get(1).adminId()).isNull();
-        verify(auditRepository).findAllByOrderByCreatedAtDesc(argThat(p -> p.getPageNumber() == 0 && p.getPageSize() == 100));
+        verify(auditRepository)
+                .findAllByOrderByCreatedAtDesc(argThat(p -> p.getPageNumber() == 0 && p.getPageSize() == 100));
     }
 }

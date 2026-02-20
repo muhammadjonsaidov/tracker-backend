@@ -96,7 +96,7 @@ class TrackingControllerIntegrationTest extends BaseIntegrationTest {
 
                 mockMvc.perform(get("/api/v1/tracking/sessions/" + sessionId + "/points")
                                 .header("Authorization", "Bearer " + token1))
-                                .andExpect(status().isBadRequest());
+                                .andExpect(status().isForbidden());
         }
 
         private String registerAndLogin(String prefix) throws Exception {

@@ -1,5 +1,9 @@
 package com.rhaen.tracker.common.exception;
 
-public class NotFoundException extends RuntimeException {
-    public NotFoundException(String message) { super(message); }
+import org.springframework.http.HttpStatus;
+
+public class NotFoundException extends TrackerException {
+    public NotFoundException(String message) {
+        super(message, HttpStatus.NOT_FOUND);
+    }
 }
